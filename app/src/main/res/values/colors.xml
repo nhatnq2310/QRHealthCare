@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand red, matches Compose theme primary -->
+    <color name="brand_red">#E53935</color>
+    <!-- Splash background -->
+    <color name="splash_bg">#E53935</color>
+</resources>

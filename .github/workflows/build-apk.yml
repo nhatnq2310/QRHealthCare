@@ -1,0 +1,60 @@
+name: Build Debug APK
+
+# Builds an installable APK on every push and on manual trigger.
+# Download the resulting "app-debug-apk" artifact from the workflow run page
+# and sideload it onto your Android device.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Generate Gradle wrapper if missing
+        run: |
+          if [ ! -f gradlew ]; then
+            gradle wrapper --gradle-version 8.10.2 --distribution-type all
+            chmod +x gradlew
+          fi
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Locate APK
+        id: locate
+        run: |
+          APK=$(find app/build/outputs/apk/debug -name '*.apk' | head -1)
+          echo "apk=$APK" >> "$GITHUB_OUTPUT"
+          echo "APK at: $APK"
+          ls -la "$APK"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: ${{ steps.locate.outputs.apk }}
+          if-no-files-found: error
+          retention-days: 30

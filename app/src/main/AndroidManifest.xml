@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Required for API calls -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Required for QR camera scanning (future feature) -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <application
+        android:name=".QrHealthcareApp"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.QrHealthcare"
+        android:usesCleartextTraffic="true">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.QrHealthcare.Splash"
+            android:windowSoftInputMode="adjustResize">
+
+            <!-- App launcher intent -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Deep link: qrhealthcare://profile/QRH-A1B2 -->
+            <!-- This is triggered when user scans a QR code with our app scheme -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="qrhealthcare"
+                    android:host="profile" />
+            </intent-filter>
+
+            <!-- Web deep link: https://qrhealthcare.com/qr/QRH-A1B2 -->
+            <!-- Uncomment when you have a real domain and configure Digital Asset Links -->
+            <!--
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="qrhealthcare.com"
+                    android:pathPrefix="/qr/" />
+            </intent-filter>
+            -->
+
+        </activity>
+    </application>
+</manifest>

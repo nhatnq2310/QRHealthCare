@@ -1,0 +1,39 @@
+# Gradle
+.gradle/
+build/
+out/
+.kotlin/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+local.properties
+captures/
+
+# Android
+*.apk
+*.aab
+*.ap_
+*.dex
+release/
+
+# Keystores — never commit signing keys
+*.jks
+*.keystore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Backend (Node)
+backend/node_modules/
+backend/.env
+backend/.mongodb-binaries/

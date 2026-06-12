@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive-icon foreground: a white medical cross centered in the safe zone.
+  The viewport is 108×108; the central ~66dp circle is the safe area that
+  every launcher (round, squircle, square, teardrop) is guaranteed to show.
+  The cross arms span ~36dp, well inside that.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Horizontal bar -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M36,49 h36 a2,2 0 0 1 2,2 v6 a2,2 0 0 1 -2,2 h-36 a2,2 0 0 1 -2,-2 v-6 a2,2 0 0 1 2,-2 z"/>
+    <!-- Vertical bar -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M49,36 h6 a2,2 0 0 1 2,2 v36 a2,2 0 0 1 -2,2 h-6 a2,2 0 0 1 -2,-2 v-36 a2,2 0 0 1 2,-2 z"/>
+</vector>
