@@ -183,6 +183,20 @@ fun AppNavigation() {
             onClick = { navController.navigate(Routes.CART) }
         )
     }
+
+    // Floating QR bubble — same visibility rules as cart bubble.
+    // Tap opens a bottom sheet listing the user's profiles and their QR codes.
+    if (showCartBubble) {
+        var showQrPicker by remember { mutableStateOf(false) }
+        com.qrhealthcare.app.ui.components.FloatingQrBubble(
+            onClick = { showQrPicker = true }
+        )
+        if (showQrPicker) {
+            com.qrhealthcare.app.ui.components.QrPickerDialog(
+                onDismiss = { showQrPicker = false }
+            )
+        }
+    }
     } // close wrapping Box
 }
 
