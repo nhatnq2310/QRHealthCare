@@ -39,7 +39,7 @@ fun QrPickerDialog(
     onDismiss: () -> Unit,
     profileViewModel: ProfileViewModel = hiltViewModel()
 ) {
-    val state by profileViewModel.state.collectAsState()
+    val listState by profileViewModel.listState.collectAsState()
     var selectedProfile by remember { mutableStateOf<Profile?>(null) }
     var profileTags by remember { mutableStateOf<List<QrTag>>(emptyList()) }
     var loadingTags by remember { mutableStateOf(false) }
@@ -59,8 +59,8 @@ fun QrPickerDialog(
         ) {
             if (selectedProfile == null) {
                 ProfileListView(
-                    profiles = state.profiles,
-                    isLoading = state.isLoading,
+                    profiles = listState.profiles,
+                    isLoading = listState.isLoading,
                     onProfileClick = { p ->
                         selectedProfile = p
                         loadingTags = true
