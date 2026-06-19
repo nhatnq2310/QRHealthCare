@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit
  */
 object ApiClient {
 
-    private const val BASE_URL = "http://10.0.2.2:4000/api/v1/"
+    private const val BASE_URL = "http://192.168.1.12:4000/api/v1/"
 
     /**
      * Base URL embedded in QR codes that get printed on stickers / shown in-app.

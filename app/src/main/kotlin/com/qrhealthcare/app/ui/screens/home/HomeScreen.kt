@@ -1,5 +1,7 @@
 package com.qrhealthcare.app.ui.screens.home
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -11,7 +13,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -212,6 +216,9 @@ fun HomeScreen(navController: NavController) {
             }
         }
 
+        // ── Organ Donation CTA ───────────────────────────────────────────────
+        OrganDonationCard()
+
         // ── How It Works ─────────────────────────────────────────────────────
         Surface(
             color = MaterialTheme.colorScheme.primary,
@@ -270,6 +277,80 @@ private fun FeatureCard(
             Text(title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(4.dp))
             Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+@Composable
+private fun OrganDonationCard() {
+    val context = LocalContext.current
+    val url = "https://dieuphoigheptangtphochiminh.vn/"
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF1F1)),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(20.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFE53935)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Favorite,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Hiến tạng — cứu người",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Black,
+                    color = Color(0xFF8B0000)
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    "Trung tâm Điều phối Ghép tạng TP.HCM",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFF8B0000).copy(alpha = 0.7f),
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "Một quyết định của bạn có thể cứu sống nhiều người. " +
+                            "Tìm hiểu về chương trình hiến tạng nhân đạo tại bệnh viện chính thức.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF5D4037)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(
+                    onClick = {
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            context.startActivity(intent)
+                        } catch (_: Exception) {
+                            // No browser installed — silently ignore
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935)),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Icon(Icons.Default.OpenInNew, null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Tìm hiểu thêm", style = MaterialTheme.typography.labelLarge)
+                }
+            }
         }
     }
 }
