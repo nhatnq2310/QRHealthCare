@@ -93,7 +93,7 @@ private fun ProfileListView(
 ) {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
-            Icon(Icons.Default.QrCode2, null, tint = Color(0xFF26A69A))
+            Icon(Icons.Default.QrCode2, null, tint = Color(0xFFFF6F00))
             Spacer(Modifier.width(8.dp))
             Text("Mã QR của bạn", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         }
@@ -137,7 +137,7 @@ private fun ProfileRow(profile: Profile, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
-                modifier = Modifier.size(44.dp).clip(CircleShape).background(Color(0xFF26A69A)),
+                modifier = Modifier.size(44.dp).clip(CircleShape).background(Color(0xFFFF6F00)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(

@@ -70,20 +70,20 @@ fun FloatingQrBubble(
                     }
                 }
         ) {
-            // Teal solid circle with white QR icon — visually distinct from
-            // the cart bubble (which is white-with-red).
+            // White circular bubble with orange QR icon — matches the cart
+            // bubble's white-with-color pattern, but different icon hue.
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .shadow(elevation = 8.dp, shape = CircleShape)
                     .clip(CircleShape)
-                    .background(Color(0xFF26A69A)),
+                    .background(Color.White),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.Default.QrCode2,
                     contentDescription = "Xem QR hồ sơ",
-                    tint = Color.White,
+                    tint = Color(0xFFFF6F00),
                     modifier = Modifier.size(28.dp)
                 )
             }
