@@ -25,6 +25,7 @@ import com.qrhealthcare.app.data.payment.VietQR
 import com.qrhealthcare.app.ui.components.QrCodeImage
 import com.qrhealthcare.app.ui.components.formatVND
 import com.qrhealthcare.app.ui.navigation.Routes
+import com.qrhealthcare.app.ui.navigation.navigateToTab
 import com.qrhealthcare.app.ui.viewmodel.CartViewModel
 import com.qrhealthcare.app.ui.viewmodel.ProfileViewModel
 
@@ -109,7 +110,7 @@ fun PaymentScreen(
                         Card { Column(modifier = Modifier.padding(16.dp)) {
                             Text("Bạn chưa có hồ sơ nào.", fontWeight = FontWeight.SemiBold)
                             Spacer(modifier = Modifier.height(8.dp))
-                            Button(onClick = { navController.navigate(Routes.PROFILES) }) { Text("Tạo hồ sơ ngay") }
+                            Button(onClick = { navController.navigateToTab(Routes.PROFILES) }) { Text("Tạo hồ sơ ngay") }
                         }}
                     } else {
                         profileState.profiles.forEach { profile ->

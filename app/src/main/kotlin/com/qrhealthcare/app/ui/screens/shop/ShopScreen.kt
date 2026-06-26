@@ -1,6 +1,14 @@
 package com.qrhealthcare.app.ui.screens.shop
 
 import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
@@ -19,6 +27,8 @@ import com.qrhealthcare.app.ui.theme.WarningAmber
 import com.qrhealthcare.app.ui.theme.WarningBg
 import com.qrhealthcare.app.ui.theme.SuccessGreen
 import com.qrhealthcare.app.ui.theme.SuccessBg
+import com.qrhealthcare.app.ui.theme.InfoBlue
+import com.qrhealthcare.app.ui.theme.InfoBg
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -28,6 +38,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.qrhealthcare.app.data.model.Product
+import com.qrhealthcare.app.data.model.Coupon
 import com.qrhealthcare.app.ui.components.formatVND
 import com.qrhealthcare.app.ui.navigation.Routes
 import com.qrhealthcare.app.ui.viewmodel.CartViewModel
@@ -119,27 +130,9 @@ fun ShopScreen(
                 }
             }
 
-            // ── Promo pills (rounded, side by side feel via wrapping) ──────────
+            // ── Rotating voucher banner (cycles every 3s, loops) ──────────────
             item(span = { GridItemSpan(2) }) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    PromoPill(
-                        modifier = Modifier.weight(1f),
-                        icon = "🎁",
-                        text = "Mã QRHEALTH",
-                        bg = WarningBg,
-                        fg = WarningAmber
-                    )
-                    PromoPill(
-                        modifier = Modifier.weight(1f),
-                        icon = "🚚",
-                        text = "Freeship 500K+",
-                        bg = SuccessBg,
-                        fg = SuccessGreen
-                    )
-                }
+                RotatingVoucherBanner(coupons = state.publicCoupons)
             }
 
             // ── Section title ──────────────────────────────────────────────────
@@ -163,34 +156,142 @@ fun ShopScreen(
     }
 }
 
-/** Small rounded promo chip used under the hero card. */
+/** A single voucher entry shown in the rotating banner. */
+private data class Voucher(
+    val icon: String,
+    val title: String,
+    val subtitle: String,
+    val bg: Color,
+    val fg: Color
+)
+
+/**
+ * Rotating voucher banner: shows the store's active PUBLIC vouchers one at a
+ * time, each for 3 seconds, looping with a smooth crossfade + slide. Driven by
+ * live coupons from the server (secret/expired/used-up codes are filtered out
+ * server-side, so they never appear here). Falls back to a generic message if
+ * there are no public vouchers.
+ */
 @Composable
-private fun PromoPill(
-    modifier: Modifier = Modifier,
-    icon: String,
-    text: String,
-    bg: Color,
-    fg: Color
-) {
-    Surface(
-        modifier = modifier,
-        color = bg,
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+private fun RotatingVoucherBanner(coupons: List<Coupon>) {
+    // Map server coupons → display rows, cycling through a few accent palettes.
+    val palettes = listOf(
+        Triple("🎁", WarningBg, WarningAmber),
+        Triple("🚚", SuccessBg, SuccessGreen),
+        Triple("💎", InfoBg, InfoBlue)
+    )
+    val vouchers = coupons.mapIndexed { i, c ->
+        val (icon, bg, fg) = palettes[i % palettes.size]
+        val discount = if (c.discountType == "percent")
+            "Giảm ${c.discountValue}%"
+        else
+            "Giảm ${formatVND(c.discountValue)}"
+        Voucher(
+            icon = icon,
+            title = c.description.ifBlank { discount },
+            subtitle = "Nhập mã ${c.code}",
+            bg = bg,
+            fg = fg
+        )
+    }
+
+    // Nothing to advertise → simple neutral banner.
+    if (vouchers.isEmpty()) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shape = RoundedCornerShape(16.dp)
         ) {
-            Text(icon, style = MaterialTheme.typography.titleMedium)
-            Text(
-                text,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = fg,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text("🛡️", style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    "An toàn sức khỏe trong tầm tay",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        return
+    }
+
+    var index by remember(vouchers.size) { mutableStateOf(0) }
+
+    // Advance every 3 seconds, looping. Only needed when 2+ vouchers exist.
+    LaunchedEffect(vouchers.size) {
+        if (vouchers.size <= 1) return@LaunchedEffect
+        while (true) {
+            kotlinx.coroutines.delay(3000)
+            index = (index + 1) % vouchers.size
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        AnimatedContent(
+            targetState = index.coerceIn(0, vouchers.size - 1),
+            transitionSpec = {
+                (slideInHorizontally { it / 2 } + fadeIn(animationSpec = tween(400)))
+                    .togetherWith(slideOutHorizontally { -it / 2 } + fadeOut(animationSpec = tween(400)))
+            },
+            label = "voucher"
+        ) { i ->
+            val v = vouchers[i]
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = v.bg,
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(v.icon, style = MaterialTheme.typography.headlineSmall)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            v.title,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = v.fg,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            v.subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = v.fg.copy(alpha = 0.85f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+
+        if (vouchers.size > 1) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                vouchers.indices.forEach { i ->
+                    val active = i == index
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 3.dp)
+                            .size(if (active) 8.dp else 6.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(
+                                if (active) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                            )
+                    )
+                }
+            }
         }
     }
 }

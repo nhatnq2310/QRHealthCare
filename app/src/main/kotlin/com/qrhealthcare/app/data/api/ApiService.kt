@@ -84,6 +84,9 @@ interface ApiService {
     @GET("coupons")
     suspend fun getAllCoupons(): Response<List<Coupon>>
 
+    @GET("coupons/public")
+    suspend fun getPublicCoupons(): Response<List<Coupon>>
+
     @POST("coupons")
     suspend fun createCoupon(@Body coupon: Coupon): Response<Coupon>
 

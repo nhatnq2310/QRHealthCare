@@ -21,6 +21,7 @@ import com.qrhealthcare.app.data.model.CartItem
 import com.qrhealthcare.app.data.model.Coupon
 import com.qrhealthcare.app.ui.components.formatVND
 import com.qrhealthcare.app.ui.navigation.Routes
+import com.qrhealthcare.app.ui.navigation.navigateToTab
 import com.qrhealthcare.app.ui.viewmodel.AuthViewModel
 import com.qrhealthcare.app.ui.viewmodel.CartViewModel
 
@@ -53,7 +54,7 @@ fun CartScreen(
                     Icon(Icons.Default.ShoppingCart, contentDescription = null,
                         modifier = Modifier.size(72.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("Giỏ hàng trống", style = MaterialTheme.typography.titleMedium)
-                    Button(onClick = { navController.navigate(Routes.SHOP) }) { Text("Tiếp tục mua sắm") }
+                    Button(onClick = { navController.navigateToTab(Routes.SHOP) }) { Text("Tiếp tục mua sắm") }
                     if (!authState.isLoggedIn) {
                         TextButton(onClick = { navController.navigate(Routes.LOGIN) }) {
                             Text("Đăng nhập để thanh toán nhanh hơn")

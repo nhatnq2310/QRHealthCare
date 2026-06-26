@@ -662,6 +662,7 @@ private fun AdminCouponCard(coupon: Coupon, onClick: () -> Unit, onToggleActive:
                         color = MaterialTheme.colorScheme.outline)
                 }
                 val parts = buildList {
+                    if (coupon.hidden) add("🔒 bí mật")
                     if (coupon.minOrderAmount > 0) add("min ${formatVND(coupon.minOrderAmount)}")
                     if (coupon.usageLimit != null) add("đã dùng ${coupon.usageCount}/${coupon.usageLimit}")
                     if (coupon.expiresAt != null) add("hết hạn ${dateFmtLong.format(Date(coupon.expiresAt))}")
@@ -689,19 +690,37 @@ private fun CouponEditorDialog(
     var value by remember { mutableStateOf(initial?.discountValue?.toString() ?: "") }
     var minOrder by remember { mutableStateOf(initial?.minOrderAmount?.toString() ?: "0") }
     var active by remember { mutableStateOf(initial?.active ?: true) }
+    var usageLimit by remember { mutableStateOf(initial?.usageLimit?.toString() ?: "") }
+    var hidden by remember { mutableStateOf(initial?.hidden ?: false) }
+    // Expiry expressed as "days from now" for simple admin entry. Empty = never.
+    var expiryDays by remember {
+        mutableStateOf(
+            initial?.expiresAt?.let {
+                val days = ((it - System.currentTimeMillis()) / 86_400_000L)
+                if (days > 0) days.toString() else ""
+            } ?: ""
+        )
+    }
 
     fun build(): Coupon? {
         val v = value.toLongOrNull() ?: return null
         val mo = minOrder.toLongOrNull() ?: 0L
         val codeTrim = code.uppercase().trim()
         if (codeTrim.isBlank()) return null
+        val limit = usageLimit.toIntOrNull()  // null = unlimited
+        val expiresAt = expiryDays.toLongOrNull()?.let {
+            if (it > 0) System.currentTimeMillis() + it * 86_400_000L else null
+        }
         return (initial ?: Coupon()).copy(
             code = codeTrim,
             description = description.trim(),
             discountType = if (isPercent) "percent" else "fixed",
             discountValue = v,
             minOrderAmount = mo,
-            active = active
+            active = active,
+            usageLimit = limit,
+            expiresAt = expiresAt,
+            hidden = hidden
         )
     }
 
@@ -731,9 +750,28 @@ private fun CouponEditorDialog(
                 OutlinedTextField(value = minOrder, onValueChange = { minOrder = it.filter { c -> c.isDigit() } },
                     label = { Text("Đơn tối thiểu (VND)") }, singleLine = true,
                     modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = usageLimit, onValueChange = { usageLimit = it.filter { c -> c.isDigit() } },
+                    label = { Text("Giới hạn lượt dùng (để trống = không giới hạn)") }, singleLine = true,
+                    modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = expiryDays, onValueChange = { expiryDays = it.filter { c -> c.isDigit() } },
+                    label = { Text("Hết hạn sau (số ngày, để trống = không hết hạn)") }, singleLine = true,
+                    modifier = Modifier.fillMaxWidth())
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Đang hoạt động", modifier = Modifier.weight(1f))
                     Switch(checked = active, onCheckedChange = { active = it })
+                }
+                // Secret voucher: valid for redemption, but never shown in the
+                // public store banner. Admin shares the code privately.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Mã bí mật")
+                        Text(
+                            "Không hiển thị ở cửa hàng, chỉ ai có mã mới dùng được",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(checked = hidden, onCheckedChange = { hidden = it })
                 }
             }
         },

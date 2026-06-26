@@ -56,6 +56,21 @@ object Routes {
     fun createProfile(type: String = "human", id: String = "") = "profile/create?type=$type&id=$id"
 }
 
+/**
+ * Navigate to one of the bottom-nav tabs (Home, Shop, Profiles, Admin,
+ * Settings) using the SAME options the bottom bar uses. This keeps a single,
+ * clean back stack so tab state is preserved and the user can always navigate
+ * back via the bottom bar — instead of getting "stuck" after jumping from a
+ * button on another screen (e.g. a CTA on Home that opens Shop/Profiles).
+ */
+fun NavController.navigateToTab(route: String) {
+    navigate(route) {
+        popUpTo(Routes.HOME) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
+
 // ─── Bottom nav items ─────────────────────────────────────────────────────────
 data class BottomNavItem(
     val route: String,
@@ -246,11 +261,7 @@ fun MainScaffold(
                         selected = currentRoute == item.route,
                         onClick = {
                             if (currentRoute != item.route) {
-                                navController.navigate(item.route) {
-                                    popUpTo(Routes.HOME) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
+                                navController.navigateToTab(item.route)
                             }
                         },
                         icon = { Icon(item.icon, contentDescription = item.label) },

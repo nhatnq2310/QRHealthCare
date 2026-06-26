@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.qrhealthcare.app.ui.navigation.Routes
+import com.qrhealthcare.app.ui.navigation.navigateToTab
 
 @Composable
 fun HomeScreen(navController: NavController) {
@@ -153,7 +154,7 @@ fun HomeScreen(navController: NavController) {
             )
             Spacer(modifier = Modifier.height(16.dp))
             Button(
-                onClick = { navController.navigate(Routes.PROFILES) },
+                onClick = { navController.navigateToTab(Routes.PROFILES) },
                 shape = RoundedCornerShape(50)
             ) {
                 Text("Đăng Ký Ngay")
@@ -181,7 +182,7 @@ fun HomeScreen(navController: NavController) {
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                OutlinedButton(onClick = { navController.navigate(Routes.SHOP) }) {
+                OutlinedButton(onClick = { navController.navigateToTab(Routes.SHOP) }) {
                     Text("Mua Ngay")
                 }
             }

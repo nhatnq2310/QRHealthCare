@@ -323,6 +323,7 @@ class ProfileViewModel @Inject constructor(
 data class ShopState(
     val products: List<Product> = emptyList(),
     val selectedProduct: Product? = null,
+    val publicCoupons: List<Coupon> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null
 )
@@ -342,6 +343,12 @@ class ShopViewModel @Inject constructor(
                 onSuccess = { _state.update { s -> s.copy(products = it, isLoading = false) } },
                 onFailure = { _state.update { s -> s.copy(error = it.message, isLoading = false) } }
             )
+        }
+        // Load public coupons for the rotating banner (best-effort, non-blocking).
+        viewModelScope.launch {
+            repo.getPublicCoupons().onSuccess { coupons ->
+                _state.update { it.copy(publicCoupons = coupons) }
+            }
         }
     }
 

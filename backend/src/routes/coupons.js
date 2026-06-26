@@ -53,6 +53,25 @@ router.post("/validate", async (req, res) => {
 
 // ── Admin / utility routes ───────────────────────────────────────────────────
 
+/**
+ * GET /coupons/public
+ * Returns only coupons safe to advertise publicly: active, not hidden, not
+ * expired, and not out of uses. Used by the store's rotating voucher banner so
+ * secret/limited codes never reach the client.
+ */
+router.get("/public", async (req, res) => {
+  const now = Date.now();
+  const list = await Coupon.find({
+    active: true,
+    hidden: { $ne: true },
+    $or: [{ expiresAt: null }, { expiresAt: { $gt: now } }],
+  }).sort({ createdAt: -1 });
+  const visible = list.filter(
+    (c) => c.usageLimit == null || c.usageCount < c.usageLimit
+  );
+  res.json(visible.map((c) => c.toJSON()));
+});
+
 router.get("/", async (req, res) => {
   const list = await Coupon.find().sort({ createdAt: -1 });
   res.json(list.map((c) => c.toJSON()));

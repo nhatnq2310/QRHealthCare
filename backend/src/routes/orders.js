@@ -1,5 +1,6 @@
 import { Router } from "express";
 import Order from "../models/Order.js";
+import Coupon from "../models/Coupon.js";
 
 const router = Router();
 
@@ -13,6 +14,15 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const o = await Order.create(req.body);
+    // If the order used a coupon, count one use against it. This is what makes
+    // a limited-use voucher actually run out (usageLimit is enforced in
+    // /coupons/validate, which compares against this count).
+    if (o.couponCode) {
+      await Coupon.updateOne(
+        { code: String(o.couponCode).toUpperCase().trim() },
+        { $inc: { usageCount: 1 } }
+      ).catch(() => {});
+    }
     res.status(201).json(o.toJSON());
   } catch (err) {
     res.status(500).json({ error: err.message });

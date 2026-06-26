@@ -13,6 +13,7 @@ const couponSchema = new mongoose.Schema(
     active:         { type: Boolean, default: true },
     usageLimit:     { type: Number, default: null }, // null = unlimited
     usageCount:     { type: Number, default: 0 },
+    hidden:         { type: Boolean, default: false }, // true = secret code, not shown in the public store banner
     createdAt:      { type: Number, default: () => Date.now() },
   },
   { toJSON: idTransform }

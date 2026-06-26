@@ -203,6 +203,16 @@ class AppRepository @Inject constructor(
     suspend fun getCurrentUserRole() = session.role.first()
     val isLoggedIn = session.isLoggedIn
 
+    /** Public, advertisable coupons for the store banner (excludes secret/expired/used-up). */
+    suspend fun getPublicCoupons(): Result<List<Coupon>> = try {
+        val response = api.getPublicCoupons()
+        val body = response.body()
+        if (response.isSuccessful && body != null) Result.success(body)
+        else Result.failure(Exception("Lỗi ${response.code()}"))
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
     /** Pull the JSON `error` field from a non-2xx response body, if present. */
     private fun extractErrorMessage(raw: String): String? {
         // Cheap parse — avoids pulling in a JSON dep just for one error field.

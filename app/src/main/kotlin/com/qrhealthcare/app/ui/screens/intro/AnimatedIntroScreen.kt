@@ -91,16 +91,12 @@ fun AnimatedIntroScreen(onFinished: () -> Unit) {
             val scale = beatScale * expandScale
             val r = baseR * scale
 
-            // The heart curve's centroid is offset from its bounding-box center.
-            // To "zoom from the center of the heart", we pin that centroid at the
-            // canvas center as the shape grows. Upright, the offset is vertical;
-            // tilted 90° clockwise, that offset becomes horizontal (toward the
-            // cusp side, i.e. to the right).
-            val heartPresence = smooth(toHeart)            // 0 sphere → 1 full heart
-            val centroidOffset = HEART_CENTROID * heartPresence * r
-
+            // The morph shape lives inside an invisible square whose center is
+            // pinned at the screen center. The heart is built centered in that
+            // square, so it simply grows from the middle of the screen until the
+            // white fills everything — no offset juggling.
             val path = buildMorphPath(
-                cx = cx - centroidOffset,   // shift so the tilted heart's centroid lands on cx
+                cx = cx,
                 cy = cy,
                 radius = r,
                 crossToSphere = toSphere,
@@ -114,7 +110,13 @@ fun AnimatedIntroScreen(onFinished: () -> Unit) {
 
 /**
  * Builds a closed path blending cross → circle → heart, sampled as N points.
- * `rotationDeg` spins the whole shape (used during the cross spin phase).
+ *
+ * Two-pass: first compute every point relative to a local origin, then measure
+ * the shape's bounding box and translate it so the box CENTER lands exactly on
+ * (cx, cy). This is the "invisible square" idea — whatever the current shape is,
+ * it sits centered in that square at the screen center and grows from there.
+ *
+ * `rotationDeg` spins the shape (used during the cross spin phase).
  */
 private fun buildMorphPath(
     cx: Float,
@@ -126,8 +128,15 @@ private fun buildMorphPath(
 ): Path {
     val n = 160
     val rot = rotationDeg * PI.toFloat() / 180f
-    val path = Path()
 
+    val xs = FloatArray(n + 1)
+    val ys = FloatArray(n + 1)
+    var minX = Float.MAX_VALUE
+    var maxX = -Float.MAX_VALUE
+    var minY = Float.MAX_VALUE
+    var maxY = -Float.MAX_VALUE
+
+    // Pass 1 — compute points around a local (0,0) origin.
     for (i in 0..n) {
         val a = (i.toFloat() / n) * 2f * PI.toFloat()
 
@@ -138,12 +147,31 @@ private fun buildMorphPath(
         val rCrossCircle = lerp(crossR, circleR, smooth(crossToSphere))
         val rr = lerp(rCrossCircle, heartR, smooth(sphereToHeart))
 
-        // Only the cross phase rotates; once it's a heart, rotation has settled
-        // to 360° (≡ 0°) so the heart sits at its fixed 90°-right tilt.
         val ar = a + rot
-        val x = cx + rr * cos(ar)
-        val y = cy + rr * sin(ar)
-        if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        val x = rr * cos(ar)
+        // Negate y: the polar heart is defined in math coords (y up). Canvas y
+        // is down, so flipping y makes the heart upright (point at bottom). The
+        // cross and circle are vertically symmetric, so the flip doesn't affect
+        // them — only the heart benefits.
+        val y = -rr * sin(ar)
+        xs[i] = x
+        ys[i] = y
+        if (x < minX) minX = x
+        if (x > maxX) maxX = x
+        if (y < minY) minY = y
+        if (y > maxY) maxY = y
+    }
+
+    // Bounding-box center (the center of the invisible square).
+    val boxCx = (minX + maxX) / 2f
+    val boxCy = (minY + maxY) / 2f
+
+    // Pass 2 — translate so the box center sits on (cx, cy).
+    val path = Path()
+    for (i in 0..n) {
+        val px = cx + (xs[i] - boxCx)
+        val py = cy + (ys[i] - boxCy)
+        if (i == 0) path.moveTo(px, py) else path.lineTo(px, py)
     }
     path.close()
     return path
@@ -171,26 +199,19 @@ private fun crossRadius(angle: Float): Float {
 }
 
 /**
- * Polar heart curve tilted 90° to the right (cusp points right, tip points
- * left). Normalized to roughly fit radius 1.
+ * Polar heart curve, upright (two lobes on top, point at the bottom) to match
+ * the reference heart icon. Normalized to roughly fit radius 1. The two-pass
+ * centering in buildMorphPath handles positioning, so this only defines shape.
  */
 private fun heartRadius(angle: Float): Float {
-    // Upright heart (cusp up) uses t = angle + π/2. To rotate the heart 90°
-    // clockwise ("to the right"), rotate the sampling angle by a further +π/2.
-    val t = angle + PI.toFloat()    // = (angle + π/2) + π/2  → heart tilted 90° right
+    // Upright heart: standard polar heart with the sampling angle offset by π/2
+    // so the cusp (dip between lobes) is at the top and the tip points down.
+    val t = angle + PI.toFloat() / 2f
     val sinT = sin(t)
     val cosT = cos(t)
     val r = 2f - 2f * sinT + (sinT * sqrt(abs(cosT))) / (sinT + 1.4f)
     return (r / 3.4f).coerceIn(0f, 1.25f)
 }
-
-/**
- * Horizontal centroid offset of the 90°-tilted heart in radius units, measured
- * from the sampling center toward the cusp (right) side. We shift the draw
- * origin left by this amount so the heart's visual center stays pinned at the
- * screen center while it scales up. (Empirically ~0.18 for this heart curve.)
- */
-private const val HEART_CENTROID = 0.18f
 
 private fun lerp(a: Float, b: Float, f: Float) = a + (b - a) * f
 private fun smooth(x: Float): Float = x * x * (3f - 2f * x)

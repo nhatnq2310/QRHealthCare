@@ -190,6 +190,7 @@ data class Coupon(
     val active: Boolean = true,
     val usageLimit: Int? = null,
     val usageCount: Int = 0,
+    val hidden: Boolean = false,          // secret code — not shown in store banner
     val createdAt: Long = 0L
 )
 
