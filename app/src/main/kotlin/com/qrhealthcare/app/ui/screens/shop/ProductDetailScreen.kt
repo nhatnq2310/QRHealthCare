@@ -11,6 +11,9 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -71,18 +74,28 @@ fun ProductDetailScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             // Product image
-            AsyncImage(
-                model = product.imageUrl,
-                contentDescription = product.name,
-                modifier = Modifier.fillMaxWidth().height(280.dp),
-                contentScale = ContentScale.Fit
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color.White)
+                    .height(280.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = com.qrhealthcare.app.data.api.ApiClient.uploadUrl(product.imageUrl),
+                    contentDescription = product.name,
+                    modifier = Modifier.fillMaxSize().padding(16.dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
 
             Column(modifier = Modifier.padding(16.dp)) {
                 // Badge
                 Surface(
                     color = MaterialTheme.colorScheme.primary,
-                    shape = RoundedCornerShape(4.dp)
+                    shape = RoundedCornerShape(50)
                 ) {
                     Text(
                         product.badge,
@@ -192,7 +205,8 @@ fun ProductDetailScreen(
                 // Add to cart
                 OutlinedButton(
                     onClick = { tryAddToCart(thenNavigate = false) },
-                    modifier = Modifier.fillMaxWidth().height(50.dp)
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth().height(52.dp)
                 ) {
                     Icon(Icons.Default.ShoppingCart, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
@@ -201,7 +215,8 @@ fun ProductDetailScreen(
                 Spacer(modifier = Modifier.height(10.dp))
                 Button(
                     onClick = { tryAddToCart(thenNavigate = true) },
-                    modifier = Modifier.fillMaxWidth().height(50.dp)
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth().height(52.dp)
                 ) { Text("MUA NGAY", fontWeight = FontWeight.Bold) }
 
                 Spacer(modifier = Modifier.height(20.dp))

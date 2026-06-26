@@ -4,6 +4,8 @@ import com.qrhealthcare.app.data.api.ApiClient
 import com.qrhealthcare.app.data.api.ApiService
 import com.qrhealthcare.app.data.api.LoginRequest
 import com.qrhealthcare.app.data.api.RegisterRequest
+import com.qrhealthcare.app.data.api.ResetPasswordRequest
+import com.qrhealthcare.app.data.api.ChangePasswordRequest
 import com.qrhealthcare.app.data.local.SessionManager
 import com.qrhealthcare.app.data.model.*
 import kotlinx.coroutines.GlobalScope
