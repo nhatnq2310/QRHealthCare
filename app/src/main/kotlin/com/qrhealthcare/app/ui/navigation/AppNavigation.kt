@@ -42,6 +42,7 @@ object Routes {
     const val ADMIN = "admin"
     const val SETTINGS = "settings"
     const val ORDER_HISTORY = "orders"
+    const val USER_GUIDE = "user_guide"
 
     fun productDetail(slug: String) = "shop/$slug"
     fun publicProfile(tagCode: String) = "public/$tagCode"
@@ -170,12 +171,18 @@ fun AppNavigation() {
                             navController.navigate(Routes.LOGIN) { popUpTo(0) { inclusive = true } }
                         }
                     },
-                    onOrderHistory = { navController.navigate(Routes.ORDER_HISTORY) }
+                    onOrderHistory = { navController.navigate(Routes.ORDER_HISTORY) },
+                    onUserGuide = { navController.navigate(Routes.USER_GUIDE) }
                 )
             }
         }
         composable(Routes.ORDER_HISTORY) {
             OrderHistoryScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Routes.USER_GUIDE) {
+            com.qrhealthcare.app.ui.screens.settings.UserGuideScreen(
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 

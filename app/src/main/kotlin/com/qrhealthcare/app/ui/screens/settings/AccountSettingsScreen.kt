@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 fun AccountSettingsScreen(
     onLogout: () -> Unit,
     onOrderHistory: () -> Unit = {},
+    onUserGuide: () -> Unit = {},
     viewModel: AuthViewModel = com.qrhealthcare.app.ui.util.activityViewModel()
 ) {
     val state by viewModel.authState.collectAsState()
@@ -173,7 +174,7 @@ fun AccountSettingsScreen(
 
         Card(shape = RoundedCornerShape(12.dp)) {
             Column {
-                LinkRow(Icons.Default.Help, "Hướng Dẫn Sử Dụng") {}
+                LinkRow(Icons.Default.Help, "Hướng Dẫn Sử Dụng", onUserGuide)
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 LinkRow(Icons.Default.Mail, "Liên Hệ Hỗ Trợ") {}
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
