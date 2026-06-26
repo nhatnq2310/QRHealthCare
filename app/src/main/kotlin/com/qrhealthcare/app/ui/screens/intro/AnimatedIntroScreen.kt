@@ -76,7 +76,9 @@ fun AnimatedIntroScreen(onFinished: () -> Unit) {
                 val cy = h / 2f
                 val half = w * 0.30f
 
-                val crossPath = Path().apply {
+                // Two separate rounded-rect bars. We measure each on its own
+                // PathMeasure (Compose's PathMeasure handles one contour only).
+                val vBar = Path().apply {
                     addRoundRect(
                         androidx.compose.ui.geometry.RoundRect(
                             left = cx - armThickness / 2, top = cy - half,
@@ -84,6 +86,8 @@ fun AnimatedIntroScreen(onFinished: () -> Unit) {
                             cornerRadius = androidx.compose.ui.geometry.CornerRadius(armThickness * 0.3f)
                         )
                     )
+                }
+                val hBar = Path().apply {
                     addRoundRect(
                         androidx.compose.ui.geometry.RoundRect(
                             left = cx - half, top = cy - armThickness / 2,
@@ -93,14 +97,12 @@ fun AnimatedIntroScreen(onFinished: () -> Unit) {
                     )
                 }
 
-                val measure = PathMeasure()
-                measure.setPath(crossPath, false)
-                val total = measure.length
+                // Progressively reveal each bar's outline.
                 val revealed = Path()
-                measure.getSegment(0f, total * crossProgress.value, revealed, true)
-                if (measure.nextContour()) {
-                    val len2 = measure.length
-                    measure.getSegment(0f, len2 * crossProgress.value, revealed, true)
+                for (bar in listOf(vBar, hBar)) {
+                    val m = PathMeasure()
+                    m.setPath(bar, false)
+                    m.getSegment(0f, m.length * crossProgress.value, revealed, true)
                 }
 
                 drawPath(
@@ -109,7 +111,10 @@ fun AnimatedIntroScreen(onFinished: () -> Unit) {
                     style = Stroke(width = w * 0.035f, cap = StrokeCap.Round)
                 )
                 if (crossProgress.value >= 1f) {
-                    drawPath(crossPath, color = onPrimary.copy(alpha = (pulseScale.value - 0.8f) / 0.2f))
+                    // Fill both bars once fully drawn, fading in with the pulse.
+                    val fillAlpha = ((pulseScale.value - 0.8f) / 0.2f).coerceIn(0f, 1f)
+                    drawPath(vBar, color = onPrimary.copy(alpha = fillAlpha))
+                    drawPath(hBar, color = onPrimary.copy(alpha = fillAlpha))
                 }
 
                 if (ecgProgress.value > 0f) {
