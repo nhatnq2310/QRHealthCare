@@ -1,7 +1,13 @@
 package com.qrhealthcare.app.ui.navigation
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -222,6 +228,7 @@ fun MainScaffold(
     val visibleItems = bottomNavItems.filter { !it.adminOnly || userRole == "admin" }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             NavigationBar {
                 visibleItems.forEach { item ->
@@ -243,8 +250,26 @@ fun MainScaffold(
             }
         }
     ) { padding ->
+        // Paint the status-bar strip with the brand red so there's no white gap
+        // at the top, then place the screen content below the system top inset.
         androidx.compose.foundation.layout.Box(
-            modifier = Modifier.padding(padding)
-        ) { content() }
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = padding.calculateBottomPadding())
+        ) {
+            // Red status-bar background fill
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsTopHeight(WindowInsets.statusBars)
+                    .background(MaterialTheme.colorScheme.primary)
+            )
+            // Actual screen content, pushed below the status bar
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .windowInsetsPadding(WindowInsets.statusBars)
+            ) { content() }
+        }
     }
 }
