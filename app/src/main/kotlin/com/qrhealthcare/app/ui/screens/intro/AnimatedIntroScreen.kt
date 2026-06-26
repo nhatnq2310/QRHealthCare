@@ -149,11 +149,7 @@ private fun buildMorphPath(
 
         val ar = a + rot
         val x = rr * cos(ar)
-        // Negate y: the polar heart is defined in math coords (y up). Canvas y
-        // is down, so flipping y makes the heart upright (point at bottom). The
-        // cross and circle are vertically symmetric, so the flip doesn't affect
-        // them — only the heart benefits.
-        val y = -rr * sin(ar)
+        val y = rr * sin(ar)
         xs[i] = x
         ys[i] = y
         if (x < minX) minX = x
@@ -199,14 +195,15 @@ private fun crossRadius(angle: Float): Float {
 }
 
 /**
- * Polar heart curve, upright (two lobes on top, point at the bottom) to match
- * the reference heart icon. Normalized to roughly fit radius 1. The two-pass
- * centering in buildMorphPath handles positioning, so this only defines shape.
+ * Polar heart curve, upright in CANVAS coordinates (y points down): two lobes
+ * at the top, point at the bottom — matching the reference heart icon and the
+ * phone's vertical orientation. Normalized to roughly fit radius 1.
  */
 private fun heartRadius(angle: Float): Float {
-    // Upright heart: standard polar heart with the sampling angle offset by π/2
-    // so the cusp (dip between lobes) is at the top and the tip points down.
-    val t = angle + PI.toFloat() / 2f
+    // Standard polar heart magnitude. With (r·cosθ, r·sinθ) in canvas coords
+    // (y down), offsetting the sampling angle by +π places the tip (largest
+    // radius) pointing DOWN and the lobed dip pointing UP — an upright heart.
+    val t = angle + PI.toFloat()
     val sinT = sin(t)
     val cosT = cos(t)
     val r = 2f - 2f * sinT + (sinT * sqrt(abs(cosT))) / (sinT + 1.4f)
