@@ -90,6 +90,7 @@ async function main() {
     identificationMark: "Sẹo nhỏ ở cằm",
     personalNumber: "079090001234",
     organDonor: true,
+    showOrganDonor: true,
     isPrivate: false,
     hiddenFields: ["personalNumber"],
     emergencyContacts: [
@@ -101,7 +102,8 @@ async function main() {
     addresses: [
       { street: "123 Lê Lợi", ward: "Bến Nghé", district: "Quận 1", city: "TP. Hồ Chí Minh", country: "Việt Nam" },
     ],
-    insurance: [{ provider: "Bảo hiểm Y tế", policyNumber: "HS40790001", expiryDate: "2027-12-31" }],
+    healthInsurance: [{ provider: "Bảo hiểm Y tế VN", policyNumber: "HS40790001", expiryDate: "2027-12-31" }],
+    lifeInsurance: [{ provider: "Prudential", policyNumber: "PRU-2024-8812", expiryDate: "2040-06-01" }],
     viewCount: 0,
     createdAt: now(),
   });
@@ -120,7 +122,8 @@ async function main() {
     medications: [],
     medicalConditions: [],
     addresses: [],
-    insurance: [],
+    healthInsurance: [],
+    lifeInsurance: [],
     viewCount: 0,
     createdAt: now(),
   });

@@ -33,6 +33,7 @@ object Routes {
     const val SHOP = "shop"
     const val PRODUCT_DETAIL = "shop/{slug}"
     const val CART = "cart"
+    const val CHECKOUT = "checkout"
     const val PAYMENT = "payment"
     const val ORDER_SUCCESS = "order_success"
     const val PROFILES = "profiles"
@@ -135,6 +136,9 @@ fun AppNavigation() {
         }
         composable(Routes.CART) {
             CartScreen(navController = navController)
+        }
+        composable(Routes.CHECKOUT) {
+            CheckoutScreen(navController = navController)
         }
         composable(Routes.PAYMENT) {
             PaymentScreen(navController = navController)

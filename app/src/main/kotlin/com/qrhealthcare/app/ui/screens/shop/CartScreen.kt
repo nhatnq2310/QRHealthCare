@@ -131,10 +131,17 @@ fun CartScreen(
                     Button(
                         onClick = {
                             if (!authState.isLoggedIn) { navController.navigate(Routes.LOGIN); return@Button }
-                            navController.navigate(Routes.PAYMENT)
+                            // No saved address → collect shipping details first.
+                            // Otherwise go straight to payment (address can still be
+                            // edited there if needed).
+                            if (authState.address.isBlank()) {
+                                navController.navigate(Routes.CHECKOUT)
+                            } else {
+                                navController.navigate(Routes.PAYMENT)
+                            }
                         },
                         modifier = Modifier.fillMaxWidth().height(52.dp),
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(12.dp)
                     ) { Text("TIẾN HÀNH THANH TOÁN", fontWeight = FontWeight.Bold) }
                 }
             }

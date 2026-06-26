@@ -24,6 +24,7 @@ const profileSchema = new mongoose.Schema(
     identificationMark: { type: String, default: "" },
     personalNumber:     { type: String, default: "" },
     organDonor:         { type: Boolean, default: false },
+    showOrganDonor:     { type: Boolean, default: true },
     isPrivate:          { type: Boolean, default: false },
     hiddenFields:       { type: [String], default: [] },
     emergencyContacts:  { type: [emergencyContact], default: [] },
@@ -31,7 +32,8 @@ const profileSchema = new mongoose.Schema(
     medications:        { type: [medication], default: [] },
     medicalConditions:  { type: [medicalCondition], default: [] },
     addresses:          { type: [profileAddress], default: [] },
-    insurance:          { type: [insurance], default: [] },
+    healthInsurance:    { type: [insurance], default: [] },  // bảo hiểm y tế
+    lifeInsurance:      { type: [insurance], default: [] },  // bảo hiểm nhân thọ
     healthDocuments:    { type: [String], default: [] }, // relative URLs from POST /uploads
     notes:              { type: String, default: "" },   // free-form user notes (dietary plan, etc.)
     viewCount:          { type: Number, default: 0 },

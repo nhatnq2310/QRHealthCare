@@ -47,7 +47,8 @@ fun CreateProfileScreen(
     var showAllergyDialog by remember { mutableStateOf(false) }
     var showMedDialog by remember { mutableStateOf(false) }
     var showConditionDialog by remember { mutableStateOf(false) }
-    var showInsuranceDialog by remember { mutableStateOf(false) }
+    var showHealthInsuranceDialog by remember { mutableStateOf(false) }
+    var showLifeInsuranceDialog by remember { mutableStateOf(false) }
     var showAddressDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(editProfileId) { viewModel.loadProfileForEdit(editProfileId) }
@@ -153,7 +154,8 @@ fun CreateProfileScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Chế Độ Riêng Tư", fontWeight = FontWeight.Bold)
                         Text(
-                            if (profile.isPrivate) "Bật — các trường đã tích sẽ bị ẩn với công chúng"
+                            if (profile.isPrivate)
+                                "Bật — nếu không tích ô nào, mọi thông tin sẽ bị ẩn (trừ thông tin cấp cứu quan trọng). Nếu tích ô, chỉ những mục đã tích bị ẩn."
                             else "Tắt — tất cả thông tin hiển thị công khai",
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -250,20 +252,53 @@ fun CreateProfileScreen(
                 }
             }
 
-            // Organ donor
-            FieldWithPrivacy(label = "Hiến Tạng", fieldKey = "organDonor",
-                isPrivate = profile.isPrivate, hiddenFields = profile.hiddenFields,
-                onToggleHide = { toggleHiddenField("organDonor", it) }, alwaysVisible = true) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Switch(checked = profile.organDonor, onCheckedChange = { update { copy(organDonor = it) } })
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(if (profile.organDonor) "✅ Đồng ý hiến tạng" else "Không đăng ký hiến tạng",
-                        style = MaterialTheme.typography.bodyMedium)
+            // Organ donor — "đã đăng ký" / "chưa đăng ký" + optional show/hide
+            SectionHeader("Đăng Ký Hiến Tạng", Icons.Default.VolunteerActivism)
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = profile.organDonor,
+                            onClick = { update { copy(organDonor = true) } },
+                            label = { Text("Đã đăng ký") },
+                            leadingIcon = if (profile.organDonor) {
+                                { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
+                            } else null,
+                            modifier = Modifier.weight(1f)
+                        )
+                        FilterChip(
+                            selected = !profile.organDonor,
+                            onClick = { update { copy(organDonor = false) } },
+                            label = { Text("Chưa đăng ký") },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    // Show/hide sub-option — only when registered. Shown by default.
+                    if (profile.organDonor) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                            Checkbox(
+                                checked = profile.showOrganDonor,
+                                onCheckedChange = { update { copy(showOrganDonor = it) } }
+                            )
+                            Text(
+                                if (profile.showOrganDonor)
+                                    "Hiển thị trạng thái hiến tạng trên hồ sơ công khai"
+                                else
+                                    "Ẩn trạng thái hiến tạng khỏi hồ sơ công khai",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
 
-            // ── Emergency contacts ────────────────────────────────────────────
+            // ── Emergency contacts (ALWAYS PUBLIC) ────────────────────────────
             SectionHeader("Liên Hệ Khẩn Cấp", Icons.Default.Call)
+            AlwaysPublicNote(isPrivate = profile.isPrivate)
             profile.emergencyContacts.forEachIndexed { i, contact ->
                 SubItemCard(
                     label = "${contact.name} · ${contact.relationship} · ${contact.phone}",
@@ -276,8 +311,9 @@ fun CreateProfileScreen(
                 Text("Thêm liên hệ khẩn cấp")
             }
 
-            // ── Allergies ─────────────────────────────────────────────────────
+            // ── Allergies (ALWAYS PUBLIC — drug allergies are safety-critical) ─
             SectionHeader("Dị Ứng", Icons.Default.Warning)
+            AlwaysPublicNote(isPrivate = profile.isPrivate)
             profile.allergies.forEachIndexed { i, allergy ->
                 SubItemCard(
                     label = "${allergy.name} · ${allergy.severity} · ${allergy.reaction}",
@@ -292,6 +328,9 @@ fun CreateProfileScreen(
 
             // ── Medications ───────────────────────────────────────────────────
             SectionHeader("Thuốc Đang Dùng", Icons.Default.Medication)
+            SectionPrivacyControl(fieldKey = "medications", label = "Thuốc đang dùng",
+                isPrivate = profile.isPrivate, hiddenFields = profile.hiddenFields,
+                onToggleHide = { toggleHiddenField("medications", it) })
             profile.medications.forEachIndexed { i, med ->
                 SubItemCard(
                     label = "${med.name} · ${med.dosage} · ${med.frequency}",
@@ -306,6 +345,9 @@ fun CreateProfileScreen(
 
             // ── Medical conditions ────────────────────────────────────────────
             SectionHeader("Bệnh Lý", Icons.Default.LocalHospital)
+            SectionPrivacyControl(fieldKey = "medicalConditions", label = "Bệnh lý nền",
+                isPrivate = profile.isPrivate, hiddenFields = profile.hiddenFields,
+                onToggleHide = { toggleHiddenField("medicalConditions", it) })
             profile.medicalConditions.forEachIndexed { i, cond ->
                 SubItemCard(
                     label = "${cond.name} · ${cond.diagnosedDate}",
@@ -318,18 +360,38 @@ fun CreateProfileScreen(
                 Text("Thêm bệnh lý")
             }
 
-            // ── Insurance ─────────────────────────────────────────────────────
-            SectionHeader("Bảo Hiểm", Icons.Default.HealthAndSafety)
-            profile.insurance.forEachIndexed { i, ins ->
+            // ── Health insurance (bảo hiểm y tế) ──────────────────────────────
+            SectionHeader("Bảo Hiểm Y Tế", Icons.Default.HealthAndSafety)
+            SectionPrivacyControl(fieldKey = "healthInsurance", label = "Bảo hiểm y tế",
+                isPrivate = profile.isPrivate, hiddenFields = profile.hiddenFields,
+                onToggleHide = { toggleHiddenField("healthInsurance", it) })
+            profile.healthInsurance.forEachIndexed { i, ins ->
                 SubItemCard(
                     label = "${ins.provider} · ${ins.policyNumber}",
-                    onDelete = { update { copy(insurance = insurance.toMutableList().also { it.removeAt(i) }) } }
+                    onDelete = { update { copy(healthInsurance = healthInsurance.toMutableList().also { it.removeAt(i) }) } }
                 )
             }
-            TextButton(onClick = { showInsuranceDialog = true }) {
+            TextButton(onClick = { showHealthInsuranceDialog = true }) {
                 Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Thêm bảo hiểm")
+                Text("Thêm bảo hiểm y tế")
+            }
+
+            // ── Life insurance (bảo hiểm nhân thọ) ────────────────────────────
+            SectionHeader("Bảo Hiểm Nhân Thọ", Icons.Default.Shield)
+            SectionPrivacyControl(fieldKey = "lifeInsurance", label = "Bảo hiểm nhân thọ",
+                isPrivate = profile.isPrivate, hiddenFields = profile.hiddenFields,
+                onToggleHide = { toggleHiddenField("lifeInsurance", it) })
+            profile.lifeInsurance.forEachIndexed { i, ins ->
+                SubItemCard(
+                    label = "${ins.provider} · ${ins.policyNumber}",
+                    onDelete = { update { copy(lifeInsurance = lifeInsurance.toMutableList().also { it.removeAt(i) }) } }
+                )
+            }
+            TextButton(onClick = { showLifeInsuranceDialog = true }) {
+                Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Thêm bảo hiểm nhân thọ")
             }
 
             // ── Health documents (uploads) ──────────────────────────────────
@@ -403,10 +465,16 @@ fun CreateProfileScreen(
             onDismiss = { showConditionDialog = false }
         )
     }
-    if (showInsuranceDialog) {
+    if (showHealthInsuranceDialog) {
         AddInsuranceDialog(
-            onAdd = { showInsuranceDialog = false; update { copy(insurance = insurance + it) } },
-            onDismiss = { showInsuranceDialog = false }
+            onAdd = { showHealthInsuranceDialog = false; update { copy(healthInsurance = healthInsurance + it) } },
+            onDismiss = { showHealthInsuranceDialog = false }
+        )
+    }
+    if (showLifeInsuranceDialog) {
+        AddInsuranceDialog(
+            onAdd = { showLifeInsuranceDialog = false; update { copy(lifeInsurance = lifeInsurance + it) } },
+            onDismiss = { showLifeInsuranceDialog = false }
         )
     }
 }
@@ -449,6 +517,60 @@ private fun FieldWithPrivacy(
                 color = MaterialTheme.colorScheme.tertiary, modifier = Modifier.padding(bottom = 4.dp))
         }
         content()
+    }
+}
+
+/**
+ * Shown under a section header for sections that are ALWAYS public (emergency
+ * contacts, allergies). Only renders the reassurance line when the profile is
+ * private — otherwise everything is public anyway and the note is noise.
+ */
+@Composable
+private fun AlwaysPublicNote(isPrivate: Boolean) {
+    if (!isPrivate) return
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(bottom = 4.dp)
+    ) {
+        Icon(
+            Icons.Default.Public, null,
+            tint = MaterialTheme.colorScheme.tertiary,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            "Luôn hiển thị công khai (thông tin cấp cứu quan trọng)",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.tertiary
+        )
+    }
+}
+
+/**
+ * Section-level privacy checkbox. Shown only when the profile is private.
+ * Lets the user hide a whole collection section (medications, conditions,
+ * insurance) from the public view by adding its key to hiddenFields.
+ */
+@Composable
+private fun SectionPrivacyControl(
+    fieldKey: String,
+    label: String,
+    isPrivate: Boolean,
+    hiddenFields: List<String>,
+    onToggleHide: (Boolean) -> Unit
+) {
+    if (!isPrivate) return
+    val isHidden = hiddenFields.contains(fieldKey)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
+    ) {
+        Checkbox(checked = isHidden, onCheckedChange = { onToggleHide(it) })
+        Text(
+            "Ẩn \"$label\" khỏi hồ sơ công khai",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

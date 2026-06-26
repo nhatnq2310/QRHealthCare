@@ -405,6 +405,24 @@ private fun OrderStatusDialog(order: Order, onSave: (String) -> Unit, onDismiss:
                 }
                 Text("Thanh toán: ${prettyPayment(order.paymentMethod)}",
                     style = MaterialTheme.typography.bodySmall)
+
+                // Shipping address (per-order details collected at checkout)
+                val sa = order.shippingAddress
+                if (sa.address.isNotBlank() || sa.fullName.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Giao đến:", style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold)
+                    if (sa.fullName.isNotBlank())
+                        Text("• ${sa.fullName}" + (if (sa.phone.isNotBlank()) " — ${sa.phone}" else ""),
+                            style = MaterialTheme.typography.bodySmall)
+                    val line = listOf(sa.address, sa.city).filter { it.isNotBlank() }.joinToString(", ")
+                    if (line.isNotBlank())
+                        Text("• $line", style = MaterialTheme.typography.bodySmall)
+                    if (sa.note.isNotBlank())
+                        Text("• Ghi chú: ${sa.note}", style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline)
+                }
+
                 if (order.items.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text("Sản phẩm:", style = MaterialTheme.typography.labelMedium,

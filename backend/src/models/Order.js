@@ -12,6 +12,17 @@ const orderItem = new mongoose.Schema(
   { _id: false }
 );
 
+const shippingAddress = new mongoose.Schema(
+  {
+    fullName: { type: String, default: "" },
+    phone:    { type: String, default: "" },
+    address:  { type: String, default: "" },  // street address
+    city:     { type: String, default: "" },
+    note:     { type: String, default: "" },  // optional delivery note
+  },
+  { _id: false }
+);
+
 const orderSchema = new mongoose.Schema(
   {
     userId:        { type: String, required: true, index: true },
@@ -22,6 +33,7 @@ const orderSchema = new mongoose.Schema(
     couponCode:    { type: String, default: "" },    // empty when no coupon used
     paymentMethod: { type: String, default: "" }, // "vietqr" | "cash" | ...
     status:        { type: String, default: "pending" },
+    shippingAddress: { type: shippingAddress, default: () => ({}) }, // per-order delivery details
     qrTagIds:      { type: [String], default: [] },
     createdAt:     { type: Number, default: () => Date.now() },
   },

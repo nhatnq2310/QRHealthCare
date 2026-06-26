@@ -347,7 +347,8 @@ class AppRepository @Inject constructor(
         profileId: String,
         paymentMethod: String,
         couponCode: String = "",
-        discountAmount: Long = 0L
+        discountAmount: Long = 0L,
+        shippingAddress: ShippingAddress = ShippingAddress()
     ): Result<Pair<Order, List<QrTag>>> {
         return try {
             val userId = session.userId.first() ?: return Result.failure(Exception("Chưa đăng nhập"))
@@ -391,6 +392,7 @@ class AppRepository @Inject constructor(
                 couponCode = couponCode,
                 paymentMethod = paymentMethod,
                 status = "pending",
+                shippingAddress = shippingAddress,
                 createdAt = System.currentTimeMillis()
             )
             val createdOrder = api.createOrder(order).body()

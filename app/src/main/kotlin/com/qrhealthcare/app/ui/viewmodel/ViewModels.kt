@@ -344,6 +344,7 @@ data class CartState(
     val items: List<CartItem> = emptyList(),
     val selectedProfileId: String = "",
     val paymentMethod: String = "",
+    val shippingAddress: ShippingAddress = ShippingAddress(),
     // ─ Coupon state ──────────────────────────────────────────────────────────
     val appliedCoupon: Coupon? = null,
     val discountAmount: Long = 0L,
@@ -399,6 +400,8 @@ class CartViewModel @Inject constructor(
     }
 
     fun setProfile(profileId: String) = _state.update { it.copy(selectedProfileId = profileId) }
+
+    fun setShippingAddress(address: ShippingAddress) = _state.update { it.copy(shippingAddress = address) }
     fun setPaymentMethod(method: String) = _state.update { it.copy(paymentMethod = method) }
 
     // ─── Coupon ──────────────────────────────────────────────────────────────
@@ -458,7 +461,8 @@ class CartViewModel @Inject constructor(
                 profileId = s.selectedProfileId,
                 paymentMethod = s.paymentMethod,
                 couponCode = s.appliedCoupon?.code ?: "",
-                discountAmount = s.discountAmount
+                discountAmount = s.discountAmount,
+                shippingAddress = s.shippingAddress
             ).fold(
                 onSuccess = { (_, tags) ->
                     _state.update { it.copy(

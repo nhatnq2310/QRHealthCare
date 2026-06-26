@@ -73,8 +73,17 @@ fun PublicProfileScreen(
 
 @Composable
 private fun PublicProfileContent(profile: Profile, modifier: Modifier = Modifier) {
-    fun isVisible(field: String): Boolean =
-        !profile.isPrivate || field in ALWAYS_VISIBLE_FIELDS || !profile.hiddenFields.contains(field)
+    // Privacy model (mirrors backend public-profile.js):
+    //  • not private                      → everything visible
+    //  • always-visible field             → always visible
+    //  • private + no boxes checked       → hide all non-essential
+    //  • private + boxes checked          → hide only the checked ones
+    fun isVisible(field: String): Boolean = when {
+        !profile.isPrivate -> true
+        field in ALWAYS_VISIBLE_FIELDS -> true
+        profile.hiddenFields.isEmpty() -> false
+        else -> !profile.hiddenFields.contains(field)
+    }
 
     Column(
         modifier = modifier
@@ -107,8 +116,8 @@ private fun PublicProfileContent(profile: Profile, modifier: Modifier = Modifier
                     if (profile.bloodGroup.isNotBlank()) {
                         InfoChip("🩸 ${profile.bloodGroup}", Color.White, MaterialTheme.colorScheme.primary)
                     }
-                    if (profile.organDonor) {
-                        InfoChip("💚 Hiến Tạng", Color.White, MaterialTheme.colorScheme.primary)
+                    if (profile.organDonor && profile.showOrganDonor && isVisible("organDonor")) {
+                        InfoChip("💚 Đã đăng ký hiến tạng", Color.White, MaterialTheme.colorScheme.primary)
                     }
                     if (isVisible("gender") && profile.gender.isNotBlank()) {
                         InfoChip(profile.gender, Color.White, MaterialTheme.colorScheme.primary)
@@ -183,10 +192,27 @@ private fun PublicProfileContent(profile: Profile, modifier: Modifier = Modifier
             }
         }
 
-        // ── Insurance ─────────────────────────────────────────────────────────
-        if (isVisible("insurance") && profile.insurance.isNotEmpty()) {
-            PublicSection("🛡️ Bảo Hiểm", Icons.Default.HealthAndSafety) {
-                profile.insurance.forEach { ins ->
+        // ── Health insurance (bảo hiểm y tế) ────────────────────────────────────
+        if (isVisible("healthInsurance") && profile.healthInsurance.isNotEmpty()) {
+            PublicSection("🛡️ Bảo Hiểm Y Tế", Icons.Default.HealthAndSafety) {
+                profile.healthInsurance.forEach { ins ->
+                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(ins.provider, fontWeight = FontWeight.SemiBold)
+                        Text(ins.policyNumber, style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (ins.expiryDate.isNotBlank())
+                        Text("HH: ${ins.expiryDate}", style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    HorizontalDivider()
+                }
+            }
+        }
+
+        // ── Life insurance (bảo hiểm nhân thọ) ──────────────────────────────────
+        if (isVisible("lifeInsurance") && profile.lifeInsurance.isNotEmpty()) {
+            PublicSection("🛡️ Bảo Hiểm Nhân Thọ", Icons.Default.Shield) {
+                profile.lifeInsurance.forEach { ins ->
                     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(ins.provider, fontWeight = FontWeight.SemiBold)

@@ -5,29 +5,45 @@ import Profile from "../models/Profile.js";
 const router = Router();
 
 // ─── Public-safe field projection ─────────────────────────────────────────────
-// Mirrors the Android PublicProfileScreen rules: only the truly safe fields are
-// shown unconditionally; everything else respects the profile's hiddenFields list
-// and the isPrivate master toggle.
-const ALWAYS_PUBLIC = new Set(["fullName", "gender", "bloodGroup", "organDonor", "profileType"]);
+// Safety-critical fields are shown unconditionally: who the person is, blood
+// type, who to call, and allergies. Everything else respects the privacy model:
+//   • isPrivate = false                  → everything public
+//   • isPrivate = true,  hiddenFields=[] → ONLY always-public fields shown
+//   • isPrivate = true,  hiddenFields=[x]→ field x hidden, everything else public
+const ALWAYS_PUBLIC = new Set([
+  "fullName", "gender", "bloodGroup", "emergencyContacts", "allergies", "profileType",
+]);
 
 function pickPublic(profile) {
   if (!profile) return null;
-  if (profile.isPrivate) {
-    // Only the master-public fields when the profile is set to private
-    return {
-      fullName:    profile.fullName,
-      gender:      profile.gender,
-      bloodGroup:  profile.bloodGroup,
-      organDonor:  profile.organDonor,
-      profileType: profile.profileType,
-      isPrivate:   true,
-    };
-  }
+  const p = profile.toJSON();
   const hidden = new Set(profile.hiddenFields || []);
-  const out = { isPrivate: false };
-  for (const [k, v] of Object.entries(profile.toJSON())) {
-    if (ALWAYS_PUBLIC.has(k) || !hidden.has(k)) out[k] = v;
+  const emptyHidden = (profile.hiddenFields || []).length === 0;
+
+  const out = { isPrivate: !!profile.isPrivate };
+
+  for (const [k, v] of Object.entries(p)) {
+    if (ALWAYS_PUBLIC.has(k)) {
+      out[k] = v;                       // always visible
+    } else if (!profile.isPrivate) {
+      out[k] = v;                       // public profile → everything
+    } else if (emptyHidden) {
+      // private + no specific boxes → hide everything non-essential
+      continue;
+    } else if (!hidden.has(k)) {
+      out[k] = v;                       // private + boxes set → only hide the boxed ones
+    }
   }
+
+  // Organ donation: respect the per-field show toggle independent of privacy.
+  // Only surface it when registered AND the user chose to show it AND it
+  // wasn't explicitly hidden.
+  if (profile.organDonor && profile.showOrganDonor && !hidden.has("organDonor")) {
+    out.organDonor = true;
+  } else {
+    delete out.organDonor;
+  }
+
   return out;
 }
 
@@ -115,7 +131,7 @@ function renderPage(p, tagCode, host) {
       ${row("Ngày sinh", p.birthDate)}
       ${row("Chiều cao", p.height)}
       ${row("Cân nặng", p.weight)}
-      ${row("Hiến tạng", p.organDonor ? "Có đăng ký" : undefined)}
+      ${row("Hiến tạng", p.organDonor ? "Đã đăng ký" : undefined)}
       ${row("Số CMND/CCCD", p.personalNumber)}
     </div>
 
@@ -127,7 +143,9 @@ function renderPage(p, tagCode, host) {
        (m) => `${m.name || ""} — ${m.dosage || ""} (${m.frequency || ""})`)}
     ${renderArray("Bệnh lý nền", p.medicalConditions || [],
        (m) => `${m.name || ""}${m.diagnosedDate ? " (chẩn đoán: " + m.diagnosedDate + ")" : ""}${m.notes ? " — " + m.notes : ""}`)}
-    ${renderArray("Bảo hiểm", p.insurance || [],
+    ${renderArray("Bảo hiểm y tế", p.healthInsurance || [],
+       (i) => `${i.provider || ""} — ${i.policyNumber || ""}${i.expiryDate ? " (hết hạn: " + i.expiryDate + ")" : ""}`)}
+    ${renderArray("Bảo hiểm nhân thọ", p.lifeInsurance || [],
        (i) => `${i.provider || ""} — ${i.policyNumber || ""}${i.expiryDate ? " (hết hạn: " + i.expiryDate + ")" : ""}`)}
 
     ${p.notes ? `<div class="section"><h3>Ghi chú</h3><div class="notes">${escapeHtml(p.notes)}</div></div>` : ""}

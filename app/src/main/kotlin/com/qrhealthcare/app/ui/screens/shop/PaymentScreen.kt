@@ -188,10 +188,21 @@ fun PaymentScreen(
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Xác Nhận Đơn Hàng", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
-                    // Delivery-address card. Required for COD, optional for VietQR
-                    // (digital goods could go without — but we show it regardless
-                    // so the customer can confirm where physical stickers ship to).
-                    val hasAddress = authState.address.isNotBlank()
+                    // Delivery-address card. Address can come from either the
+                    // user's saved account address OR the per-order shipping
+                    // address collected on the Checkout screen.
+                    val orderAddr = cartState.shippingAddress
+                    val effectiveAddress = when {
+                        orderAddr.address.isNotBlank() ->
+                            listOfNotNull(
+                                orderAddr.fullName.ifBlank { null },
+                                orderAddr.phone.ifBlank { null },
+                                listOf(orderAddr.address, orderAddr.city).filter { it.isNotBlank() }.joinToString(", ").ifBlank { null }
+                            ).joinToString(" · ")
+                        authState.address.isNotBlank() -> authState.address
+                        else -> ""
+                    }
+                    val hasAddress = effectiveAddress.isNotBlank()
                     Card(
                         colors = CardDefaults.cardColors(
                             containerColor = if (hasAddress) MaterialTheme.colorScheme.surfaceVariant
@@ -210,14 +221,18 @@ fun PaymentScreen(
                                 Text(
                                     "Địa Chỉ Giao Hàng",
                                     style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.weight(1f)
                                 )
+                                TextButton(onClick = { navController.navigate(Routes.CHECKOUT) }) {
+                                    Text(if (hasAddress) "Sửa" else "Thêm")
+                                }
                             }
                             if (hasAddress) {
-                                Text(authState.address, style = MaterialTheme.typography.bodyMedium)
+                                Text(effectiveAddress, style = MaterialTheme.typography.bodyMedium)
                             } else {
                                 Text(
-                                    "Chưa có địa chỉ. Vui lòng vào Tài Khoản → Địa Chỉ để cập nhật trước khi đặt hàng.",
+                                    "Chưa có địa chỉ. Bấm \"Thêm\" để nhập địa chỉ giao hàng.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.error
                                 )
@@ -324,7 +339,7 @@ fun PaymentScreen(
                                 if (success) showSuccessDialog = true
                             }
                         },
-                        enabled = !cartState.isPlacingOrder && authState.address.isNotBlank(),
+                        enabled = !cartState.isPlacingOrder && hasAddress,
                         modifier = Modifier.fillMaxWidth().height(52.dp)
                     ) {
                         if (cartState.isPlacingOrder) {

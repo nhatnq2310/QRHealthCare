@@ -37,7 +37,8 @@ data class Profile(
     val eyeColor: String = "",
     val identificationMark: String = "",
     val personalNumber: String = "",      // CCCD / Passport number
-    val organDonor: Boolean = false,
+    val organDonor: Boolean = false,         // true = "đã đăng ký", false = "chưa đăng ký"
+    val showOrganDonor: Boolean = true,      // when registered, whether to display it publicly
     // Privacy settings
     val isPrivate: Boolean = false,       // Master privacy toggle
     val hiddenFields: List<String> = emptyList(), // Field keys that are hidden when isPrivate=true
@@ -47,15 +48,20 @@ data class Profile(
     val medications: List<Medication> = emptyList(),
     val medicalConditions: List<MedicalCondition> = emptyList(),
     val addresses: List<ProfileAddress> = emptyList(),
-    val insurance: List<Insurance> = emptyList(),
+    val healthInsurance: List<Insurance> = emptyList(),  // bảo hiểm y tế
+    val lifeInsurance: List<Insurance> = emptyList(),    // bảo hiểm nhân thọ
     val healthDocuments: List<String> = emptyList(), // relative URLs from POST /uploads, e.g. "/uploads/abc.jpg"
     val notes: String = "",                          // free-form personal notes (dietary plan, etc.)
     val viewCount: Int = 0,
     val createdAt: Long = 0L
 )
 
-// Fields that are ALWAYS visible to the public regardless of privacy settings
-val ALWAYS_VISIBLE_FIELDS = listOf("fullName", "gender", "bloodGroup", "organDonor")
+// Fields that are ALWAYS visible to the public regardless of privacy settings.
+// These are safety-critical for emergency responders: who the person is,
+// their blood type, who to call, and what they're allergic to.
+val ALWAYS_VISIBLE_FIELDS = listOf(
+    "fullName", "gender", "bloodGroup", "emergencyContacts", "allergies"
+)
 
 data class EmergencyContact(
     val name: String = "",
@@ -149,8 +155,17 @@ data class Order(
     val couponCode: String = "",          // empty if no coupon
     val paymentMethod: String = "",       // "vietqr" | "cash" (legacy: "bank" | "momo" | "vnpay" | "google_play")
     val status: String = "pending",       // "pending" | "paid" | "shipped" | "delivered"
+    val shippingAddress: ShippingAddress = ShippingAddress(), // per-order delivery details
     val qrTagIds: List<String> = emptyList(), // IDs of generated QR tags
     val createdAt: Long = 0L
+)
+
+data class ShippingAddress(
+    val fullName: String = "",
+    val phone: String = "",
+    val address: String = "",
+    val city: String = "",
+    val note: String = ""
 )
 
 data class OrderItem(
