@@ -105,6 +105,35 @@ class AppRepository @Inject constructor(
         ApiClient.authToken = null
     }
 
+    /** Reset password without email (verify by email + full name). */
+    suspend fun resetPassword(email: String, fullName: String, newPassword: String): Result<String> = try {
+        val response = api.resetPassword(ResetPasswordRequest(email.trim(), fullName.trim(), newPassword))
+        if (!response.isSuccessful) {
+            val msg = response.errorBody()?.string()?.let { extractErrorMessage(it) }
+                ?: "Lỗi ${response.code()}"
+            Result.failure(Exception(msg))
+        } else {
+            Result.success(response.body()?.message ?: "Đặt lại mật khẩu thành công")
+        }
+    } catch (e: Exception) {
+        Result.failure(Exception("Lỗi kết nối: ${e.message}"))
+    }
+
+    /** Change password for the logged-in user (verify current password). */
+    suspend fun changePassword(currentPassword: String, newPassword: String): Result<String> = try {
+        val email = session.email.first() ?: return Result.failure(Exception("Chưa đăng nhập"))
+        val response = api.changePassword(ChangePasswordRequest(email, currentPassword, newPassword))
+        if (!response.isSuccessful) {
+            val msg = response.errorBody()?.string()?.let { extractErrorMessage(it) }
+                ?: "Lỗi ${response.code()}"
+            Result.failure(Exception(msg))
+        } else {
+            Result.success(response.body()?.message ?: "Đổi mật khẩu thành công")
+        }
+    } catch (e: Exception) {
+        Result.failure(Exception("Lỗi kết nối: ${e.message}"))
+    }
+
     /** Update the logged-in user's shipping address on the server, then mirror it in the local session. */
     suspend fun updateUserAddress(address: String): Result<User> = try {
         val userId = session.userId.first() ?: return Result.failure(Exception("Chưa đăng nhập"))

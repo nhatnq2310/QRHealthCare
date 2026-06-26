@@ -25,6 +25,7 @@ import com.qrhealthcare.app.util.Validators
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
     onNavigateToRegister: () -> Unit,
+    onNavigateToForgot: () -> Unit = {},
     viewModel: AuthViewModel = com.qrhealthcare.app.ui.util.activityViewModel()
 ) {
     var email by remember { mutableStateOf("") }
@@ -99,6 +100,14 @@ fun LoginScreen(
             },
             modifier = Modifier.fillMaxWidth()
         )
+
+        // Forgot-password link, right-aligned
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = onNavigateToForgot) {
+                Text("Quên mật khẩu?", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary)
+            }
+        }
 
         if (errorMsg != null) {
             Spacer(modifier = Modifier.height(8.dp))
@@ -228,8 +237,16 @@ fun RegisterScreen(
             onValueChange = { confirmPassword = it },
             label = { Text("Xác nhận mật khẩu") },
             singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
+            visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            trailingIcon = {
+                IconButton(onClick = { showPassword = !showPassword }) {
+                    Icon(
+                        if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        contentDescription = null
+                    )
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -267,6 +284,131 @@ fun RegisterScreen(
             TextButton(onClick = onNavigateToLogin) {
                 Text("Đăng Nhập", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             }
+        }
+    }
+}
+
+// ─── FORGOT PASSWORD ──────────────────────────────────────────────────────────
+
+/**
+ * Email-less password reset. The user proves ownership by entering their
+ * email AND the exact full name on the account, then sets a new password.
+ * (For a real launch, swap this for an emailed reset link.)
+ */
+@Composable
+fun ForgotPasswordScreen(
+    onBack: () -> Unit,
+    onResetSuccess: () -> Unit,
+    viewModel: AuthViewModel = com.qrhealthcare.app.ui.util.activityViewModel()
+) {
+    var email by remember { mutableStateOf("") }
+    var fullName by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var showPassword by remember { mutableStateOf(false) }
+    var errorMsg by remember { mutableStateOf<String?>(null) }
+    var successMsg by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(40.dp))
+        Text("Đặt Lại Mật Khẩu", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            "Nhập email và họ tên chính xác trên tài khoản để xác minh, sau đó đặt mật khẩu mới.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(28.dp))
+
+        OutlinedTextField(
+            value = email, onValueChange = { email = it },
+            label = { Text("Email") }, singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedTextField(
+            value = fullName, onValueChange = { fullName = it },
+            label = { Text("Họ và tên (như khi đăng ký)") }, singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedTextField(
+            value = newPassword, onValueChange = { newPassword = it },
+            label = { Text("Mật khẩu mới") }, singleLine = true,
+            visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            trailingIcon = {
+                IconButton(onClick = { showPassword = !showPassword }) {
+                    Icon(if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility, null)
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedTextField(
+            value = confirmPassword, onValueChange = { confirmPassword = it },
+            label = { Text("Xác nhận mật khẩu mới") }, singleLine = true,
+            visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        if (errorMsg != null) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(errorMsg!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        }
+        if (successMsg != null) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(successMsg!!, color = MaterialTheme.colorScheme.tertiary,
+                style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(
+            onClick = {
+                errorMsg = when {
+                    email.isBlank() -> "Vui lòng nhập email"
+                    fullName.isBlank() -> "Vui lòng nhập họ tên"
+                    newPassword.length < 6 -> "Mật khẩu phải có ít nhất 6 ký tự"
+                    newPassword != confirmPassword -> "Mật khẩu xác nhận không khớp"
+                    else -> null
+                }
+                if (errorMsg != null) return@Button
+                loading = true
+                viewModel.resetPassword(email.trim(), fullName.trim(), newPassword) { ok, msg ->
+                    loading = false
+                    if (ok) {
+                        successMsg = "✓ ${msg ?: "Đặt lại mật khẩu thành công"}. Đang chuyển về đăng nhập..."
+                        errorMsg = null
+                        onResetSuccess()
+                    } else {
+                        errorMsg = msg
+                    }
+                }
+            },
+            enabled = !loading,
+            modifier = Modifier.fillMaxWidth().height(50.dp)
+        ) {
+            if (loading) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp),
+                    color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+            } else {
+                Text("Đặt Lại Mật Khẩu", style = MaterialTheme.typography.labelLarge)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+        TextButton(onClick = onBack) {
+            Text("Quay lại đăng nhập", color = MaterialTheme.colorScheme.primary)
         }
     }
 }

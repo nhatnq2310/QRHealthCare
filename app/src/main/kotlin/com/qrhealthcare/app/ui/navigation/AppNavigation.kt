@@ -35,6 +35,7 @@ import kotlinx.coroutines.launch
 object Routes {
     const val LOGIN = "login"
     const val REGISTER = "register"
+    const val FORGOT_PASSWORD = "forgot_password"
     const val HOME = "home"
     const val SHOP = "shop"
     const val PRODUCT_DETAIL = "shop/{slug}"
@@ -111,7 +112,16 @@ fun AppNavigation() {
         composable(Routes.LOGIN) {
             LoginScreen(
                 onLoginSuccess = { navController.navigate(Routes.HOME) { popUpTo(Routes.LOGIN) { inclusive = true } } },
-                onNavigateToRegister = { navController.navigate(Routes.REGISTER) }
+                onNavigateToRegister = { navController.navigate(Routes.REGISTER) },
+                onNavigateToForgot = { navController.navigate(Routes.FORGOT_PASSWORD) }
+            )
+        }
+        composable(Routes.FORGOT_PASSWORD) {
+            com.qrhealthcare.app.ui.screens.auth.ForgotPasswordScreen(
+                onBack = { navController.popBackStack() },
+                onResetSuccess = {
+                    navController.navigate(Routes.LOGIN) { popUpTo(Routes.LOGIN) { inclusive = true } }
+                }
             )
         }
         composable(Routes.REGISTER) {

@@ -138,6 +138,26 @@ class AuthViewModel @Inject constructor(
             )
         }
     }
+
+    /** Reset password without login (verified by email + full name). */
+    fun resetPassword(email: String, fullName: String, newPassword: String, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            repo.resetPassword(email, fullName, newPassword).fold(
+                onSuccess = { onResult(true, it) },
+                onFailure = { onResult(false, it.message) }
+            )
+        }
+    }
+
+    /** Change password for the logged-in user. */
+    fun changePassword(currentPassword: String, newPassword: String, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            repo.changePassword(currentPassword, newPassword).fold(
+                onSuccess = { onResult(true, it) },
+                onFailure = { onResult(false, it.message) }
+            )
+        }
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

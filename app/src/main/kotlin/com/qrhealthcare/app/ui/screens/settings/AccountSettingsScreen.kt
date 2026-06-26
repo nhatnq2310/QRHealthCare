@@ -3,6 +3,7 @@ package com.qrhealthcare.app.ui.screens.settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -12,6 +13,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.qrhealthcare.app.ui.viewmodel.AuthViewModel
@@ -27,6 +31,7 @@ fun AccountSettingsScreen(
     val state by viewModel.authState.collectAsState()
     var showLogoutConfirm by remember { mutableStateOf(false) }
     var showAddressDialog by remember { mutableStateOf(false) }
+    var showChangePasswordDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -45,6 +50,21 @@ fun AccountSettingsScreen(
                 }
             },
             onDismiss = { showAddressDialog = false }
+        )
+    }
+
+    if (showChangePasswordDialog) {
+        ChangePasswordDialog(
+            onSave = { current, new, done ->
+                viewModel.changePassword(current, new) { success, msg ->
+                    if (success) {
+                        showChangePasswordDialog = false
+                        scope.launch { snackbarHostState.showSnackbar(msg ?: "Đổi mật khẩu thành công") }
+                    }
+                    done(success, msg)
+                }
+            },
+            onDismiss = { showChangePasswordDialog = false }
         )
     }
 
@@ -166,6 +186,14 @@ fun AccountSettingsScreen(
 
         Card(shape = RoundedCornerShape(12.dp)) {
             LinkRow(Icons.Default.ReceiptLong, "Lịch Sử Đơn Hàng", onOrderHistory)
+        }
+
+        // ── Security ─────────────────────────────────────────────────────────
+        Text("Bảo Mật", style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+
+        Card(shape = RoundedCornerShape(12.dp)) {
+            LinkRow(Icons.Default.Lock, "Đổi Mật Khẩu") { showChangePasswordDialog = true }
         }
 
         // ── Links ────────────────────────────────────────────────────────────
@@ -328,4 +356,82 @@ private fun LinkRow(icon: ImageVector, label: String, onClick: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurface)
         Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
+}
+
+@Composable
+private fun ChangePasswordDialog(
+    onSave: (current: String, new: String, done: (Boolean, String?) -> Unit) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var current by remember { mutableStateOf("") }
+    var newPass by remember { mutableStateOf("") }
+    var confirm by remember { mutableStateOf("") }
+    var show by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var saving by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = { if (!saving) onDismiss() },
+        icon = { Icon(Icons.Default.Lock, null, tint = MaterialTheme.colorScheme.primary) },
+        title = { Text("Đổi Mật Khẩu") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = current, onValueChange = { current = it },
+                    label = { Text("Mật khẩu hiện tại") }, singleLine = true,
+                    visualTransformation = if (show) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    trailingIcon = {
+                        IconButton(onClick = { show = !show }) {
+                            Icon(if (show) Icons.Default.VisibilityOff else Icons.Default.Visibility, null)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = newPass, onValueChange = { newPass = it },
+                    label = { Text("Mật khẩu mới") }, singleLine = true,
+                    visualTransformation = if (show) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = confirm, onValueChange = { confirm = it },
+                    label = { Text("Xác nhận mật khẩu mới") }, singleLine = true,
+                    visualTransformation = if (show) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (error != null) {
+                    Text(error!!, color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                enabled = !saving,
+                onClick = {
+                    error = when {
+                        current.isBlank() -> "Nhập mật khẩu hiện tại"
+                        newPass.length < 6 -> "Mật khẩu mới phải có ít nhất 6 ký tự"
+                        newPass != confirm -> "Mật khẩu xác nhận không khớp"
+                        newPass == current -> "Mật khẩu mới phải khác mật khẩu cũ"
+                        else -> null
+                    }
+                    if (error != null) return@Button
+                    saving = true
+                    onSave(current, newPass) { ok, msg ->
+                        saving = false
+                        if (!ok) error = msg
+                    }
+                }
+            ) {
+                if (saving) CircularProgressIndicator(modifier = Modifier.size(18.dp),
+                    color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                else Text("Lưu")
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss, enabled = !saving) { Text("Hủy") } }
+    )
 }

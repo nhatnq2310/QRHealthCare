@@ -15,6 +15,9 @@ data class RegisterRequest(
     val role: String = "user"
 )
 data class AuthResponse(val user: User? = null, val token: String? = null, val error: String? = null)
+data class ResetPasswordRequest(val email: String, val fullName: String, val newPassword: String)
+data class ChangePasswordRequest(val email: String, val currentPassword: String, val newPassword: String)
+data class SimpleResponse(val ok: Boolean = false, val message: String? = null, val error: String? = null)
 
 // ─── Coupon payloads ─────────────────────────────────────────────────────────
 
@@ -44,6 +47,12 @@ interface ApiService {
 
     @POST("auth/register")
     suspend fun register(@Body body: RegisterRequest): Response<AuthResponse>
+
+    @POST("auth/reset-password")
+    suspend fun resetPassword(@Body body: ResetPasswordRequest): Response<SimpleResponse>
+
+    @POST("auth/change-password")
+    suspend fun changePassword(@Body body: ChangePasswordRequest): Response<SimpleResponse>
 
     // ─── Users ────────────────────────────────────────────────────────────────
 
