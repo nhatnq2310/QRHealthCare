@@ -22,16 +22,16 @@ package com.qrhealthcare.app.data.payment
 object MerchantConfig {
 
     /** Napas BIN of the receiving bank. See [BankBins] for common values. */
-    const val BANK_BIN: String = "970422"  // ← MB Bank (placeholder)
+    const val BANK_BIN: String = "970423"  // ← TPBank
 
     /** Receiving account number — no spaces, no separators. */
-    const val ACCOUNT_NUMBER: String = "0000000000"  // ← REPLACE with your real account
+    const val ACCOUNT_NUMBER: String = "04233380601"  // ← TPBank account
 
     /** Human-readable account holder name — shown to the customer as a sanity check. */
-    const val ACCOUNT_NAME: String = "QR HEALTHCARE"  // ← Account holder name on file at the bank
+    const val ACCOUNT_NAME: String = "NGUYEN QUANG NHAT"
 
     /** Friendly name of the bank, shown in the UI alongside the QR. */
-    const val BANK_NAME: String = "MB Bank"
+    const val BANK_NAME: String = "TPBank"
 }
 
 /** Common Vietnamese bank Napas BINs — pick the one that matches [MerchantConfig.BANK_BIN]. */

@@ -117,5 +117,22 @@
     "materials": "Sticker được làm từ vinyl chất lượng cao",
     "durability": ["Chống Nước", "Chống Tia UV", "Chống Bụi"],
     "shipping": "Sản phẩm sẽ được gửi trong vòng 24 giờ sau khi đặt hàng"
+  },
+  {
+    "slug": "san-pham-thu-nghiem",
+    "name": "Sản Phẩm Thử Nghiệm (Test)",
+    "price": 10000,
+    "oldPrice": null,
+    "badge": "Test",
+    "description": "Sản phẩm dùng để kiểm tra thanh toán. Giá 10.000₫. Có thể xóa sau khi test xong.",
+    "imageUrl": "https://placehold.co/400x400/00897b/ffffff?text=TEST+10K",
+    "category": "sticker",
+    "emergencyContactRequired": false,
+    "lowStock": false,
+    "quantity": "1 Sản phẩm test",
+    "dimensions": "—",
+    "materials": "—",
+    "durability": ["Test"],
+    "shipping": "Sản phẩm test — dùng để kiểm tra luồng thanh toán"
   }
 ]
