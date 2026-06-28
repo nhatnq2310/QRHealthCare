@@ -21,6 +21,8 @@ data class AuthState(
     val email: String = "",
     val fullName: String = "",
     val address: String = "",
+    val phone: String = "",
+    val city: String = "",
     val isLoading: Boolean = false,
     val error: String? = null
 )
@@ -46,15 +48,19 @@ class AuthViewModel @Inject constructor(
                 session.email,
                 session.fullName,
                 session.address,
-                session.role
+                session.role,
+                session.phone,
+                session.city
             ) { values ->
-                // combine(6) returns Array<Any?> in this signature — destructure positionally.
+                // combine(8) returns Array<Any?> in this signature — destructure positionally.
                 val loggedIn = values[0] as Boolean
                 val userId   = values[1] as String?
                 val email    = values[2] as String?
                 val fullName = values[3] as String?
                 val address  = values[4] as String?
                 val role     = values[5] as String?
+                val phone    = values[6] as String?
+                val city     = values[7] as String?
                 AuthState(
                     isInitialized = true,
                     isLoggedIn = loggedIn,
@@ -62,7 +68,9 @@ class AuthViewModel @Inject constructor(
                     userRole = role?.ifBlank { "user" } ?: "user",
                     email = email.orEmpty(),
                     fullName = fullName.orEmpty(),
-                    address = address.orEmpty()
+                    address = address.orEmpty(),
+                    phone = phone.orEmpty(),
+                    city = city.orEmpty()
                 )
             }.collect { snapshot ->
                 // Preserve transient UI flags (isLoading, error) while replacing the rest.
@@ -121,13 +129,18 @@ class AuthViewModel @Inject constructor(
     }
 
     /** Edit the logged-in user's shipping address. Persists to backend and to the session. */
-    fun updateAddress(newAddress: String, onResult: (Boolean, String?) -> Unit) {
+    fun updateAddress(
+        newAddress: String,
+        phone: String = "",
+        city: String = "",
+        onResult: (Boolean, String?) -> Unit
+    ) {
         viewModelScope.launch {
             _authState.update { it.copy(isLoading = true, error = null) }
-            repo.updateUserAddress(newAddress.trim()).fold(
+            repo.updateUserAddress(newAddress.trim(), phone.trim(), city.trim()).fold(
                 onSuccess = {
                     // session.saveAddress inside the repo triggers the combine collector,
-                    // which refreshes authState.address automatically.
+                    // which refreshes authState.address/phone/city automatically.
                     _authState.update { it.copy(isLoading = false) }
                     onResult(true, null)
                 },
@@ -372,6 +385,7 @@ data class CartState(
     val selectedProfileId: String = "",
     val paymentMethod: String = "",
     val shippingAddress: ShippingAddress = ShippingAddress(),
+    val paymentRef: String = "",
     // ─ Coupon state ──────────────────────────────────────────────────────────
     val appliedCoupon: Coupon? = null,
     val discountAmount: Long = 0L,
@@ -429,6 +443,8 @@ class CartViewModel @Inject constructor(
     fun setProfile(profileId: String) = _state.update { it.copy(selectedProfileId = profileId) }
 
     fun setShippingAddress(address: ShippingAddress) = _state.update { it.copy(shippingAddress = address) }
+
+    fun setPaymentRef(ref: String) = _state.update { it.copy(paymentRef = ref) }
     fun setPaymentMethod(method: String) = _state.update { it.copy(paymentMethod = method) }
 
     // ─── Coupon ──────────────────────────────────────────────────────────────
@@ -489,7 +505,8 @@ class CartViewModel @Inject constructor(
                 paymentMethod = s.paymentMethod,
                 couponCode = s.appliedCoupon?.code ?: "",
                 discountAmount = s.discountAmount,
-                shippingAddress = s.shippingAddress
+                shippingAddress = s.shippingAddress,
+                paymentRef = s.paymentRef
             ).fold(
                 onSuccess = { (_, tags) ->
                     _state.update { it.copy(

@@ -61,7 +61,9 @@ class AppRepository @Inject constructor(
                 fullName = user.fullName,
                 address = user.address,
                 role = user.role,
-                token = token
+                token = token,
+                phone = user.phone,
+                city = user.city
             )
             ApiClient.authToken = token
             AuthResult(user = user, token = token)
@@ -93,7 +95,9 @@ class AppRepository @Inject constructor(
                 fullName = user.fullName,
                 address = user.address,
                 role = user.role,
-                token = token
+                token = token,
+                phone = user.phone,
+                city = user.city
             )
             ApiClient.authToken = token
             AuthResult(user = user, token = token)
@@ -137,11 +141,11 @@ class AppRepository @Inject constructor(
     }
 
     /** Update the logged-in user's shipping address on the server, then mirror it in the local session. */
-    suspend fun updateUserAddress(address: String): Result<User> = try {
+    suspend fun updateUserAddress(address: String, phone: String = "", city: String = ""): Result<User> = try {
         val userId = session.userId.first() ?: return Result.failure(Exception("Chưa đăng nhập"))
         val response = api.updateUserAddress(
             userId,
-            com.qrhealthcare.app.data.api.UpdateAddressRequest(address)
+            com.qrhealthcare.app.data.api.UpdateAddressRequest(address, phone, city)
         )
         if (!response.isSuccessful) {
             val msg = response.errorBody()?.string()?.let { extractErrorMessage(it) }
@@ -149,7 +153,7 @@ class AppRepository @Inject constructor(
             Result.failure(Exception(msg))
         } else {
             response.body()?.let {
-                session.saveAddress(it.address)
+                session.saveAddress(it.address, it.phone, it.city)
                 Result.success(it)
             } ?: Result.failure(Exception("Phản hồi trống"))
         }
@@ -389,7 +393,8 @@ class AppRepository @Inject constructor(
         paymentMethod: String,
         couponCode: String = "",
         discountAmount: Long = 0L,
-        shippingAddress: ShippingAddress = ShippingAddress()
+        shippingAddress: ShippingAddress = ShippingAddress(),
+        paymentRef: String = ""
     ): Result<Pair<Order, List<QrTag>>> {
         return try {
             val userId = session.userId.first() ?: return Result.failure(Exception("Chưa đăng nhập"))
@@ -433,6 +438,7 @@ class AppRepository @Inject constructor(
                 couponCode = couponCode,
                 paymentMethod = paymentMethod,
                 status = "pending",
+                paymentRef = paymentRef,
                 shippingAddress = shippingAddress,
                 createdAt = System.currentTimeMillis()
             )

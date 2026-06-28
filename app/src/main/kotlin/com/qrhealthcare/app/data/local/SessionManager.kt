@@ -31,6 +31,8 @@ class SessionManager @Inject constructor(
         private val KEY_EMAIL = stringPreferencesKey("email")
         private val KEY_FULL_NAME = stringPreferencesKey("full_name")
         private val KEY_ADDRESS = stringPreferencesKey("address")
+        private val KEY_PHONE = stringPreferencesKey("phone")
+        private val KEY_CITY = stringPreferencesKey("city")
         private val KEY_ROLE = stringPreferencesKey("role")
         private val KEY_TOKEN = stringPreferencesKey("token") // JWT in production
     }
@@ -43,21 +45,29 @@ class SessionManager @Inject constructor(
         fullName: String,
         address: String,
         role: String,
-        token: String  // JWT from POST /auth/login or /auth/register
+        token: String,  // JWT from POST /auth/login or /auth/register
+        phone: String = "",
+        city: String = ""
     ) {
         context.dataStore.edit { prefs ->
             prefs[KEY_USER_ID] = userId
             prefs[KEY_EMAIL] = email
             prefs[KEY_FULL_NAME] = fullName
             prefs[KEY_ADDRESS] = address
+            prefs[KEY_PHONE] = phone
+            prefs[KEY_CITY] = city
             prefs[KEY_ROLE] = role
             prefs[KEY_TOKEN] = token
         }
     }
 
-    /** Patch just the address field after a successful PUT /users/:id. */
-    suspend fun saveAddress(address: String) {
-        context.dataStore.edit { prefs -> prefs[KEY_ADDRESS] = address }
+    /** Patch the shipping fields after a successful PUT /users/:id. */
+    suspend fun saveAddress(address: String, phone: String = "", city: String = "") {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_ADDRESS] = address
+            prefs[KEY_PHONE] = phone
+            prefs[KEY_CITY] = city
+        }
     }
 
     // ── Read ──────────────────────────────────────────────────────────────────
@@ -66,6 +76,8 @@ class SessionManager @Inject constructor(
     val email: Flow<String?> = context.dataStore.data.map { it[KEY_EMAIL] }
     val fullName: Flow<String?> = context.dataStore.data.map { it[KEY_FULL_NAME] }
     val address: Flow<String?> = context.dataStore.data.map { it[KEY_ADDRESS] }
+    val phone: Flow<String?> = context.dataStore.data.map { it[KEY_PHONE] }
+    val city: Flow<String?> = context.dataStore.data.map { it[KEY_CITY] }
     val role: Flow<String?> = context.dataStore.data.map { it[KEY_ROLE] }
     val token: Flow<String?> = context.dataStore.data.map { it[KEY_TOKEN] }
 

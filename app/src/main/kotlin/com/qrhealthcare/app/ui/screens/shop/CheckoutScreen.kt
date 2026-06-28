@@ -45,11 +45,13 @@ fun CheckoutScreen(
     val cartState by cartViewModel.state.collectAsState()
     val authState by authViewModel.authState.collectAsState()
 
-    // Pre-fill: existing per-order address first, else fall back to saved account address.
+    // Pre-fill: existing per-order address first, else fall back to saved
+    // account fields (name, address, phone, city) so returning users barely
+    // have to type anything.
     var fullName by remember { mutableStateOf(cartState.shippingAddress.fullName.ifBlank { authState.fullName }) }
-    var phone    by remember { mutableStateOf(cartState.shippingAddress.phone) }
+    var phone    by remember { mutableStateOf(cartState.shippingAddress.phone.ifBlank { authState.phone }) }
     var address  by remember { mutableStateOf(cartState.shippingAddress.address.ifBlank { authState.address }) }
-    var city     by remember { mutableStateOf(cartState.shippingAddress.city) }
+    var city     by remember { mutableStateOf(cartState.shippingAddress.city.ifBlank { authState.city }) }
     var note     by remember { mutableStateOf(cartState.shippingAddress.note) }
 
     var attemptedSubmit by remember { mutableStateOf(false) }
@@ -195,6 +197,9 @@ fun CheckoutScreen(
                                 note = note.trim()
                             )
                         )
+                        // Also persist to the account so these fields auto-fill
+                        // next time (best-effort; checkout proceeds regardless).
+                        authViewModel.updateAddress(address.trim(), phone.trim(), city.trim()) { _, _ -> }
                         navController.navigate(Routes.PAYMENT)
                     }
                 },

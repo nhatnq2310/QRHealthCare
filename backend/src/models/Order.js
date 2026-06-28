@@ -31,6 +31,7 @@ const orderSchema = new mongoose.Schema(
     totalAmount:   { type: Number, default: 0 },     // final amount after discount
     discountAmount:{ type: Number, default: 0 },     // amount knocked off by the coupon
     couponCode:    { type: String, default: "" },    // empty when no coupon used
+    paymentRef:    { type: String, default: "" },    // QR transfer note for reconciliation (e.g. QRH12345678)
     paymentMethod: { type: String, default: "" }, // "vietqr" | "cash" | ...
     status:        { type: String, default: "pending" },
     shippingAddress: { type: shippingAddress, default: () => ({}) }, // per-order delivery details

@@ -11,6 +11,8 @@ data class User(
     @SerializedName("fullName")
     val fullName: String = "",
     val address: String = "",             // shipping address — edited from Account Settings
+    val phone: String = "",               // contact phone
+    val city: String = "",                // city / province
     val role: String = "user",            // "user" | "admin"
     val createdAt: Long = 0L
 )
@@ -153,6 +155,7 @@ data class Order(
     val totalAmount: Long = 0L,           // final, after discount
     val discountAmount: Long = 0L,        // 0 if no coupon
     val couponCode: String = "",          // empty if no coupon
+    val paymentRef: String = "",          // QR transfer note for reconciliation (e.g. QRH12345678)
     val paymentMethod: String = "",       // "vietqr" | "cash" (legacy: "bank" | "momo" | "vnpay" | "google_play")
     val status: String = "pending",       // "pending" | "paid" | "shipped" | "delivered"
     val shippingAddress: ShippingAddress = ShippingAddress(), // per-order delivery details

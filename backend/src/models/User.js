@@ -21,7 +21,9 @@ const userSchema = new mongoose.Schema(
     email:        { type: String, required: true, unique: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true }, // bcrypt — never sent to client
     fullName:     { type: String, default: "" },
-    address:      { type: String, default: "" }, // user's shipping address
+    address:      { type: String, default: "" }, // user's shipping address (street)
+    phone:        { type: String, default: "" }, // user's contact phone
+    city:         { type: String, default: "" }, // user's city / province
     role:         { type: String, enum: ["user", "admin"], default: "user" },
     createdAt:    { type: Number, default: () => Date.now() }, // epoch ms, matches Kotlin Long
   },

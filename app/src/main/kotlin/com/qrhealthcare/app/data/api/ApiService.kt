@@ -22,7 +22,11 @@ data class SimpleResponse(val ok: Boolean = false, val message: String? = null, 
 // ─── Coupon payloads ─────────────────────────────────────────────────────────
 
 data class CouponValidateRequest(val code: String, val subtotal: Long)
-data class UpdateAddressRequest(val address: String)
+data class UpdateAddressRequest(
+    val address: String,
+    val phone: String? = null,
+    val city: String? = null
+)
 
 data class UploadResponse(
     val url: String = "",       // relative path like "/uploads/abc.jpg"

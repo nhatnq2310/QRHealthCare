@@ -50,6 +50,12 @@ fun PaymentScreen(
     var selectedPayment by remember { mutableStateOf("") }
     var showSuccessDialog by remember { mutableStateOf(false) }
 
+    // One payment reference per checkout session, used as the VietQR transfer
+    // note AND saved on the order so admin can reconcile a bank transfer to an
+    // order. Generated once and stored in cart state.
+    val orderRef = remember { "QRH" + System.currentTimeMillis().toString().takeLast(8) }
+    LaunchedEffect(orderRef) { cartViewModel.setPaymentRef(orderRef) }
+
     LaunchedEffect(Unit) { profileViewModel.loadMyProfiles() }
 
     // ── Order success dialog ─────────────────────────────────────────────────
@@ -189,9 +195,11 @@ fun PaymentScreen(
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Xác Nhận Đơn Hàng", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
-                    // Delivery-address card. Address can come from either the
-                    // user's saved account address OR the per-order shipping
-                    // address collected on the Checkout screen.
+                    // Delivery details. We REQUIRE both a delivery address and a
+                    // phone number on every order. The per-order shipping address
+                    // (from the Checkout screen) carries both; a bare saved
+                    // account address has no phone, so such users are sent to
+                    // Checkout to supply one.
                     val orderAddr = cartState.shippingAddress
                     val effectiveAddress = when {
                         orderAddr.address.isNotBlank() ->
@@ -203,7 +211,11 @@ fun PaymentScreen(
                         authState.address.isNotBlank() -> authState.address
                         else -> ""
                     }
-                    val hasAddress = effectiveAddress.isNotBlank()
+                    val hasPhone = orderAddr.phone.isNotBlank()
+                    val hasAddressLine = orderAddr.address.isNotBlank() || authState.address.isNotBlank()
+                    // Both required to proceed.
+                    val canOrder = hasPhone && hasAddressLine
+                    val hasAddress = canOrder
                     Card(
                         colors = CardDefaults.cardColors(
                             containerColor = if (hasAddress) MaterialTheme.colorScheme.surfaceVariant
@@ -233,7 +245,7 @@ fun PaymentScreen(
                                 Text(effectiveAddress, style = MaterialTheme.typography.bodyMedium)
                             } else {
                                 Text(
-                                    "Chưa có địa chỉ. Bấm \"Thêm\" để nhập địa chỉ giao hàng.",
+                                    "Bắt buộc có địa chỉ và số điện thoại để giao hàng. Bấm \"Thêm\" để nhập.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.error
                                 )
@@ -290,11 +302,6 @@ fun PaymentScreen(
 
                     // VietQR display — generated locally from MerchantConfig
                     if (selectedPayment == "vietqr") {
-                        // Transient reference shown in the bank-app note field.
-                        // We pre-compute it so the QR stays stable while the user is on this screen.
-                        val orderRef = remember {
-                            "QRH" + System.currentTimeMillis().toString().takeLast(8)
-                        }
                         val vietQrString = remember(orderRef) {
                             VietQR.build(
                                 bankBin = MerchantConfig.BANK_BIN,

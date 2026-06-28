@@ -406,6 +406,15 @@ private fun OrderStatusDialog(order: Order, onSave: (String) -> Unit, onDismiss:
                 Text("Thanh toán: ${prettyPayment(order.paymentMethod)}",
                     style = MaterialTheme.typography.bodySmall)
 
+                // Payment reference — match this against the bank-transfer note
+                // when reconciling a VietQR payment.
+                if (order.paymentRef.isNotBlank()) {
+                    Text("Mã đối soát: ${order.paymentRef}",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary)
+                }
+
                 // Shipping address (per-order details collected at checkout)
                 val sa = order.shippingAddress
                 if (sa.address.isNotBlank() || sa.fullName.isNotBlank()) {
