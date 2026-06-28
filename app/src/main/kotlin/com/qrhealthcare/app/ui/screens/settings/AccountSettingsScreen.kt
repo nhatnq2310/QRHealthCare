@@ -38,13 +38,15 @@ fun AccountSettingsScreen(
     if (showAddressDialog) {
         AddressEditDialog(
             current = state.address,
+            currentPhone = state.phone,
+            currentCity = state.city,
             isSaving = state.isLoading,
-            onSave = { newAddress ->
-                viewModel.updateAddress(newAddress) { success, err ->
+            onSave = { newAddress, newPhone, newCity ->
+                viewModel.updateAddress(newAddress, newPhone, newCity) { success, err ->
                     showAddressDialog = false
                     scope.launch {
                         snackbarHostState.showSnackbar(
-                            if (success) "Đã cập nhật địa chỉ" else (err ?: "Cập nhật thất bại")
+                            if (success) "Đã cập nhật thông tin giao hàng" else (err ?: "Cập nhật thất bại")
                         )
                     }
                 }
@@ -161,6 +163,15 @@ fun AccountSettingsScreen(
                     label = "Địa Chỉ",
                     value = state.address.ifBlank { "Chưa cập nhật — bấm để thêm" },
                     isPlaceholder = state.address.isBlank(),
+                    onClick = { showAddressDialog = true }
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                // Phone — tap to edit (same dialog as address)
+                EditableInfoRow(
+                    icon = Icons.Default.Phone,
+                    label = "Số Điện Thoại",
+                    value = state.phone.ifBlank { "Chưa cập nhật — bấm để thêm" },
+                    isPlaceholder = state.phone.isBlank(),
                     onClick = { showAddressDialog = true }
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
@@ -295,19 +306,24 @@ private fun EditableInfoRow(
 @Composable
 private fun AddressEditDialog(
     current: String,
+    currentPhone: String,
+    currentCity: String,
     isSaving: Boolean,
-    onSave: (String) -> Unit,
+    onSave: (address: String, phone: String, city: String) -> Unit,
     onDismiss: () -> Unit
 ) {
     var text by remember(current) { mutableStateOf(current) }
+    var phone by remember(currentPhone) { mutableStateOf(currentPhone) }
+    var city by remember(currentCity) { mutableStateOf(currentCity) }
+    fun phoneOk(p: String) = p.trim().length >= 8 && p.trim().all { it.isDigit() || it in "+ -()" }
     AlertDialog(
         onDismissRequest = { if (!isSaving) onDismiss() },
         icon = { Icon(Icons.Default.LocationOn, null, tint = MaterialTheme.colorScheme.primary) },
-        title = { Text("Địa Chỉ Nhận Hàng", fontWeight = FontWeight.Bold) },
+        title = { Text("Thông Tin Giao Hàng", fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    "Nhập địa chỉ đầy đủ (số nhà, đường, phường, quận, thành phố).",
+                    "Thông tin này sẽ tự điền khi bạn đặt hàng.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -315,9 +331,28 @@ private fun AddressEditDialog(
                     value = text,
                     onValueChange = { text = it },
                     label = { Text("Địa chỉ") },
-                    placeholder = { Text("VD: 123 Lê Lợi, Bến Nghé, Quận 1, TP.HCM") },
+                    placeholder = { Text("VD: 123 Lê Lợi, Bến Nghé, Quận 1") },
                     minLines = 2,
-                    maxLines = 5,
+                    maxLines = 4,
+                    enabled = !isSaving,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = phone,
+                    onValueChange = { phone = it },
+                    label = { Text("Số điện thoại") },
+                    placeholder = { Text("VD: 0901234567") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    enabled = !isSaving,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = city,
+                    onValueChange = { city = it },
+                    label = { Text("Tỉnh / Thành phố") },
+                    placeholder = { Text("VD: TP. Hồ Chí Minh") },
+                    singleLine = true,
                     enabled = !isSaving,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -325,8 +360,8 @@ private fun AddressEditDialog(
         },
         confirmButton = {
             Button(
-                onClick = { onSave(text) },
-                enabled = !isSaving && text.trim().length >= 5
+                onClick = { onSave(text, phone, city) },
+                enabled = !isSaving && text.trim().length >= 5 && phoneOk(phone)
             ) {
                 if (isSaving) {
                     CircularProgressIndicator(

@@ -132,6 +132,8 @@ fun CartScreen(
                     Button(
                         onClick = {
                             if (!authState.isLoggedIn) { navController.navigate(Routes.LOGIN); return@Button }
+                            // Fresh checkout always starts at step 1.
+                            cartViewModel.setCheckoutStep(1)
                             // No saved address → collect shipping details first.
                             // Otherwise go straight to payment (address can still be
                             // edited there if needed).

@@ -386,6 +386,7 @@ data class CartState(
     val paymentMethod: String = "",
     val shippingAddress: ShippingAddress = ShippingAddress(),
     val paymentRef: String = "",
+    val checkoutStep: Int = 1,            // 1=profile, 2=payment, 3=confirm — survives nav to Checkout & back
     // ─ Coupon state ──────────────────────────────────────────────────────────
     val appliedCoupon: Coupon? = null,
     val discountAmount: Long = 0L,
@@ -446,6 +447,8 @@ class CartViewModel @Inject constructor(
 
     fun setPaymentRef(ref: String) = _state.update { it.copy(paymentRef = ref) }
     fun setPaymentMethod(method: String) = _state.update { it.copy(paymentMethod = method) }
+
+    fun setCheckoutStep(step: Int) = _state.update { it.copy(checkoutStep = step) }
 
     // ─── Coupon ──────────────────────────────────────────────────────────────
 

@@ -46,8 +46,14 @@ fun PaymentScreen(
     val profileState by profileViewModel.listState.collectAsState()
     val authState by authViewModel.authState.collectAsState()
 
-    var step by remember { mutableIntStateOf(1) }  // 1=profile, 2=payment, 3=confirm
-    var selectedPayment by remember { mutableStateOf("") }
+    // step and selectedPayment are stored in the (activity-scoped) CartViewModel
+    // so they survive navigating to the Checkout screen and back — otherwise the
+    // user would lose their place and payment choice every time they edit the
+    // address. Local mirrors keep the existing read/write call-sites working.
+    val step = cartState.checkoutStep
+    fun setStep(s: Int) = cartViewModel.setCheckoutStep(s)
+    val selectedPayment = cartState.paymentMethod
+    fun setSelectedPayment(p: String) = cartViewModel.setPaymentMethod(p)
     var showSuccessDialog by remember { mutableStateOf(false) }
 
     // One payment reference per checkout session, used as the VietQR transfer
@@ -74,7 +80,7 @@ fun PaymentScreen(
             TopAppBar(
                 title = { Text(when(step) { 1 -> "Chọn Hồ Sơ"; 2 -> "Thanh Toán"; else -> "Xác Nhận" }) },
                 navigationIcon = {
-                    IconButton(onClick = { if (step > 1) step-- else navController.popBackStack() }) {
+                    IconButton(onClick = { if (step > 1) setStep(step - 1) else navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
@@ -130,7 +136,7 @@ fun PaymentScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
-                        onClick = { step = 2 },
+                        onClick = { setStep(2) },
                         enabled = cartState.selectedProfileId.isNotBlank(),
                         modifier = Modifier.fillMaxWidth().height(50.dp)
                     ) { Text("Tiếp Theo →") }
@@ -145,7 +151,7 @@ fun PaymentScreen(
 
                     PAYMENT_METHODS.forEach { (key, emoji, label) ->
                         OutlinedCard(
-                            modifier = Modifier.fillMaxWidth().clickable { selectedPayment = key },
+                            modifier = Modifier.fillMaxWidth().clickable { setSelectedPayment(key) },
                             border = BorderStroke(
                                 width = if (selectedPayment == key) 2.dp else 1.dp,
                                 color = if (selectedPayment == key) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
@@ -183,7 +189,7 @@ fun PaymentScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
-                        onClick = { step = 3 },
+                        onClick = { setStep(3) },
                         enabled = selectedPayment.isNotBlank(),
                         modifier = Modifier.fillMaxWidth().height(50.dp)
                     ) { Text("Tiếp Theo →") }
