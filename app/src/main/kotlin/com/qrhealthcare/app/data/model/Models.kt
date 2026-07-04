@@ -115,6 +115,12 @@ data class Product(
     val description: String = "",
     val imageUrl: String = "",
     val category: String = "",            // "sticker" | "card" | "tag"
+    // How many QR tags to generate per unit purchased of this product.
+    // 0 = no QR tag (accessory/refill item), 1 = normal single item,
+    // 2+ = combo/bundle containing multiple trackable items.
+    // IMPORTANT: category alone doesn't tell you this — a combo and a plain
+    // refill sticker can share the same category but need different counts.
+    val qrTagsPerUnit: Int = 1,
     val emergencyContactRequired: Boolean = false,  // replaces legacy bloodGroupSelect
     val lowStock: Boolean = false,
     val quantity: String = "",

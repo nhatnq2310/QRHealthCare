@@ -442,10 +442,15 @@ class AppRepository @Inject constructor(
         return try {
             val userId = session.userId.first() ?: return Result.failure(Exception("Chưa đăng nhập"))
 
-            // Generate QR tags for each item × quantity
+            // Generate QR tags for each item × quantity — but only as many as
+            // the product actually calls for (product.qrTagsPerUnit). A combo
+            // package can need 2 tags per unit; an accessory/refill item (e.g.
+            // "Sticker Che Phủ Thêm") needs 0. Category alone can't tell us
+            // this, since a combo and a plain refill can share a category.
             val generatedTags = mutableListOf<QrTag>()
             for (item in items) {
-                repeat(item.quantity) {
+                val tagsForThisItem = item.product.qrTagsPerUnit * item.quantity
+                repeat(tagsForThisItem) {
                     val tag = QrTag(
                         tagCode = generateTagCode(),
                         pin = generatePin(),

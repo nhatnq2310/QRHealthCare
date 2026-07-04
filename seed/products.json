@@ -13,8 +13,13 @@
     "quantity": "7 Sticker",
     "dimensions": "Kích thước Sticker Y Tế: 7.6 x 2.5 cm",
     "materials": "Sticker được làm từ vinyl chất lượng cao với lớp phủ Matt Lamination",
-    "durability": ["Chống Nước", "Chống Tia UV", "Chống Bụi"],
-    "shipping": "Sản phẩm sẽ được gửi trong vòng 24 giờ sau khi đặt hàng"
+    "durability": [
+      "Chống Nước",
+      "Chống Tia UV",
+      "Chống Bụi"
+    ],
+    "shipping": "Sản phẩm sẽ được gửi trong vòng 24 giờ sau khi đặt hàng",
+    "qrTagsPerUnit": 2
   },
   {
     "slug": "sticker-y-te",
@@ -30,8 +35,13 @@
     "quantity": "4 Sticker Y Tế",
     "dimensions": "Kích thước Sticker: 7.6 x 2.5 cm",
     "materials": "Sticker được làm từ vinyl chất lượng cao với lớp phủ Matt Lamination",
-    "durability": ["Chống Nước", "Chống Tia UV", "Chống Bụi"],
-    "shipping": "Sản phẩm sẽ được gửi trong vòng 24 giờ sau khi đặt hàng"
+    "durability": [
+      "Chống Nước",
+      "Chống Tia UV",
+      "Chống Bụi"
+    ],
+    "shipping": "Sản phẩm sẽ được gửi trong vòng 24 giờ sau khi đặt hàng",
+    "qrTagsPerUnit": 1
   },
   {
     "slug": "the-y-te",
@@ -47,8 +57,13 @@
     "quantity": "1 Thẻ Y Tế",
     "dimensions": "Kích thước Thẻ: 8.57 x 5.4 cm",
     "materials": "Thẻ được làm từ chất liệu PVC 800 micron",
-    "durability": ["Chống Nước", "Chống Tia UV", "Chống Bụi"],
-    "shipping": "Sản phẩm sẽ được gửi trong vòng 24 giờ sau khi đặt hàng"
+    "durability": [
+      "Chống Nước",
+      "Chống Tia UV",
+      "Chống Bụi"
+    ],
+    "shipping": "Sản phẩm sẽ được gửi trong vòng 24 giờ sau khi đặt hàng",
+    "qrTagsPerUnit": 1
   },
   {
     "slug": "sticker-che-phu-them",
@@ -64,8 +79,13 @@
     "quantity": "2 Sticker Che Phủ",
     "dimensions": "Kích thước: 3.8 x 1.9 cm",
     "materials": "Sticker được làm từ vinyl chất lượng cao",
-    "durability": ["Chống Nước", "Chống Tia UV", "Chống Bụi"],
-    "shipping": "Sản phẩm sẽ được gửi trong vòng 24 giờ sau khi đặt hàng"
+    "durability": [
+      "Chống Nước",
+      "Chống Tia UV",
+      "Chống Bụi"
+    ],
+    "shipping": "Sản phẩm sẽ được gửi trong vòng 24 giờ sau khi đặt hàng",
+    "qrTagsPerUnit": 0
   },
   {
     "slug": "tag-y-te",
@@ -81,8 +101,13 @@
     "quantity": "1 Tag",
     "dimensions": "Kích thước Móc khóa: 3.8 x 4.4 cm",
     "materials": "Tag được làm từ chất liệu tốt nhất",
-    "durability": ["Chống Nước", "Chống Tia UV", "Chống Bụi"],
-    "shipping": "Sản phẩm sẽ được gửi trong vòng 24 giờ sau khi đặt hàng"
+    "durability": [
+      "Chống Nước",
+      "Chống Tia UV",
+      "Chống Bụi"
+    ],
+    "shipping": "Sản phẩm sẽ được gửi trong vòng 24 giờ sau khi đặt hàng",
+    "qrTagsPerUnit": 1
   },
   {
     "slug": "tag-thu-cung",
@@ -98,8 +123,13 @@
     "quantity": "1 Tag",
     "dimensions": "Kích thước Móc khóa: 3.8 x 4.4 cm",
     "materials": "Tag được làm từ chất liệu tốt nhất",
-    "durability": ["Chống Nước", "Chống Tia UV", "Chống Bụi"],
-    "shipping": "Sản phẩm sẽ được gửi trong vòng 24 giờ sau khi đặt hàng"
+    "durability": [
+      "Chống Nước",
+      "Chống Tia UV",
+      "Chống Bụi"
+    ],
+    "shipping": "Sản phẩm sẽ được gửi trong vòng 24 giờ sau khi đặt hàng",
+    "qrTagsPerUnit": 1
   },
   {
     "slug": "sticker-tim-chu",
@@ -115,8 +145,13 @@
     "quantity": "4 Sticker",
     "dimensions": "Kích thước Sticker: 3.8 x 1.8 cm",
     "materials": "Sticker được làm từ vinyl chất lượng cao",
-    "durability": ["Chống Nước", "Chống Tia UV", "Chống Bụi"],
-    "shipping": "Sản phẩm sẽ được gửi trong vòng 24 giờ sau khi đặt hàng"
+    "durability": [
+      "Chống Nước",
+      "Chống Tia UV",
+      "Chống Bụi"
+    ],
+    "shipping": "Sản phẩm sẽ được gửi trong vòng 24 giờ sau khi đặt hàng",
+    "qrTagsPerUnit": 1
   },
   {
     "slug": "san-pham-thu-nghiem",
@@ -132,7 +167,10 @@
     "quantity": "1 Sản phẩm test",
     "dimensions": "—",
     "materials": "—",
-    "durability": ["Test"],
-    "shipping": "Sản phẩm test — dùng để kiểm tra luồng thanh toán"
+    "durability": [
+      "Test"
+    ],
+    "shipping": "Sản phẩm test — dùng để kiểm tra luồng thanh toán",
+    "qrTagsPerUnit": 1
   }
 ]
