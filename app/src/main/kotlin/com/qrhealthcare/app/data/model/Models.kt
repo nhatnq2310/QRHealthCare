@@ -206,6 +206,28 @@ data class CouponValidation(
     val error: String? = null
 )
 
+// ─── Checkout funnel tracking ──────────────────────────────────────────────────
+
+/**
+ * Mirrors backend/src/models/CheckoutSession.js. One row per checkout attempt,
+ * created when the user opens the shipping-info screen and updated as they
+ * move forward — independent of whether an Order ever gets created. This is
+ * what powers drop-out / abandonment reporting, since the Order collection
+ * alone only contains completed checkouts.
+ */
+data class CheckoutSession(
+    val id: String = "",
+    val userId: String = "",
+    val cartValue: Long = 0L,
+    val itemCount: Int = 0,
+    val step: Int = 1,           // furthest step reached: 1=shipping, 2=profile, 3=payment method, 4=confirmed
+    val completed: Boolean = false,
+    val orderId: String = "",
+    val paymentMethod: String = "",
+    val startedAt: Long = 0L,
+    val updatedAt: Long = 0L
+)
+
 // ─── Admin ────────────────────────────────────────────────────────────────────
 
 data class AdminMetrics(
@@ -229,5 +251,13 @@ data class AdminMetrics(
     // ─ Full lists for the management tabs ────────────────────────────────────
     val allUsers: List<User> = emptyList(),
     val allOrders: List<Order> = emptyList(),
-    val allCoupons: List<Coupon> = emptyList()
+    val allCoupons: List<Coupon> = emptyList(),
+    // ─ Checkout funnel: drop-out & abandonment ───────────────────────────────
+    val checkoutSessionsStarted: Int = 0,        // total checkouts started (any step reached)
+    val checkoutSessionsCompleted: Int = 0,      // reached step 4 (order confirmed)
+    val checkoutAbandonmentRate: Double = 0.0,    // 0..1 — started but never completed
+    val checkoutConversionRate: Double = 0.0,     // 0..1 — completed / started
+    val abandonedCartValue: Long = 0L,            // sum of cartValue on incomplete sessions
+    val dropOutByStep: Map<Int, Int> = emptyMap(),// step → count of sessions that stalled there (furthest reached, never progressed further, not completed)
+    val allCheckoutSessions: List<CheckoutSession> = emptyList()
 )

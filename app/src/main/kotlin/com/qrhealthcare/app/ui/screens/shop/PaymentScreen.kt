@@ -136,7 +136,10 @@ fun PaymentScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
-                        onClick = { setStep(2) },
+                        onClick = {
+                            setStep(2)
+                            cartViewModel.reportCheckoutStep(2)
+                        },
                         enabled = cartState.selectedProfileId.isNotBlank(),
                         modifier = Modifier.fillMaxWidth().height(50.dp)
                     ) { Text("Tiếp Theo →") }
@@ -189,7 +192,10 @@ fun PaymentScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
-                        onClick = { setStep(3) },
+                        onClick = {
+                            setStep(3)
+                            cartViewModel.reportCheckoutStep(3, paymentMethod = selectedPayment)
+                        },
                         enabled = selectedPayment.isNotBlank(),
                         modifier = Modifier.fillMaxWidth().height(50.dp)
                     ) { Text("Tiếp Theo →") }

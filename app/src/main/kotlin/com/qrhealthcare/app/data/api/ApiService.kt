@@ -182,4 +182,21 @@ interface ApiService {
     /** Update order status */
     @PUT("orders/{id}")
     suspend fun updateOrder(@Path("id") id: String, @Body order: Order): Response<Order>
+
+    // ─── Checkout sessions (funnel / drop-out / abandonment tracking) ──────────
+
+    /** Get all checkout sessions — admin use, powers drop-out & abandonment reporting */
+    @GET("checkout-sessions")
+    suspend fun getAllCheckoutSessions(): Response<List<CheckoutSession>>
+
+    /** Called once, the moment the user opens the shipping-info screen ("checkout started") */
+    @POST("checkout-sessions")
+    suspend fun startCheckoutSession(@Body body: Map<String, @JvmSuppressWildcards Any>): Response<CheckoutSession>
+
+    /** Called on each subsequent step reached, and again with completed=true on order success */
+    @PATCH("checkout-sessions/{id}")
+    suspend fun updateCheckoutSession(
+        @Path("id") id: String,
+        @Body body: Map<String, @JvmSuppressWildcards Any>
+    ): Response<CheckoutSession>
 }

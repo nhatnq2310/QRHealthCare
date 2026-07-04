@@ -387,6 +387,7 @@ data class CartState(
     val shippingAddress: ShippingAddress = ShippingAddress(),
     val paymentRef: String = "",
     val checkoutStep: Int = 1,            // 1=profile, 2=payment, 3=confirm — survives nav to Checkout & back
+    val checkoutSessionId: String = "",   // id of the backend CheckoutSession row for drop-out/abandonment tracking
     // ─ Coupon state ──────────────────────────────────────────────────────────
     val appliedCoupon: Coupon? = null,
     val discountAmount: Long = 0L,
@@ -498,6 +499,27 @@ class CartViewModel @Inject constructor(
         it.copy(appliedCoupon = null, discountAmount = 0L, couponError = null)
     }
 
+    // ── Checkout funnel tracking (drop-out / abandonment) ──────────────────────
+    // Best-effort throughout: a failure to log never blocks the actual checkout.
+
+    /** Call once when the shipping-info screen is first shown ("checkout started"). */
+    fun startCheckoutTracking() {
+        if (_state.value.checkoutSessionId.isNotBlank()) return // already started this session
+        viewModelScope.launch {
+            repo.startCheckoutSession(
+                cartValue = subtotal,
+                itemCount = totalItems
+            ).onSuccess { id -> _state.update { it.copy(checkoutSessionId = id) } }
+        }
+    }
+
+    /** Report the furthest funnel step reached: 2=profile selected, 3=payment method chosen. */
+    fun reportCheckoutStep(step: Int, paymentMethod: String? = null) {
+        val id = _state.value.checkoutSessionId
+        if (id.isBlank()) return
+        viewModelScope.launch { repo.updateCheckoutSession(id, step = step, paymentMethod = paymentMethod) }
+    }
+
     fun placeOrder(onResult: (Boolean, String?) -> Unit) {
         viewModelScope.launch {
             _state.update { it.copy(isPlacingOrder = true, error = null) }
@@ -511,7 +533,12 @@ class CartViewModel @Inject constructor(
                 shippingAddress = s.shippingAddress,
                 paymentRef = s.paymentRef
             ).fold(
-                onSuccess = { (_, tags) ->
+                onSuccess = { (order, tags) ->
+                    // Mark the funnel session as completed — this is what excludes
+                    // it from the abandonment count on the admin dashboard.
+                    _state.value.checkoutSessionId.takeIf { it.isNotBlank() }?.let { id ->
+                        viewModelScope.launch { repo.updateCheckoutSession(id, step = 4, completed = true, orderId = order.id) }
+                    }
                     _state.update { it.copy(
                         isPlacingOrder = false,
                         orderSuccess = true,

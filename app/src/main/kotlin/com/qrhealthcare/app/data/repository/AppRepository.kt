@@ -387,6 +387,49 @@ class AppRepository @Inject constructor(
      * Creates an order and generates unique QR tags for each item quantity.
      * Returns the created order with the generated QR tags' tagCodes and PINs.
      */
+    // ═══════════════════════════════════════════════════════════════════════
+    // CHECKOUT FUNNEL TRACKING (drop-out / abandonment)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Call once, the moment the user lands on the shipping-info screen — this
+     * is "checkout started". Returns the session id so the caller can report
+     * further progress with [updateCheckoutSession]. Best-effort: a failure
+     * here should never block checkout itself.
+     */
+    suspend fun startCheckoutSession(cartValue: Long, itemCount: Int): Result<String> = try {
+        val userId = session.userId.first() ?: return Result.failure(Exception("Chưa đăng nhập"))
+        val body = mapOf("userId" to userId, "cartValue" to cartValue, "itemCount" to itemCount)
+        val response = api.startCheckoutSession(body)
+        response.body()?.id?.let { Result.success(it) } ?: Result.failure(Exception("Phản hồi trống"))
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    /**
+     * Report that the checkout session reached [step] (2=profile selected,
+     * 3=payment method chosen), or pass [completed]=true with [orderId] once
+     * the order is actually placed. Best-effort — swallow failures so this
+     * never interrupts the checkout flow.
+     */
+    suspend fun updateCheckoutSession(
+        sessionId: String,
+        step: Int? = null,
+        paymentMethod: String? = null,
+        completed: Boolean = false,
+        orderId: String? = null
+    ) {
+        if (sessionId.isBlank()) return
+        val body = buildMap<String, Any> {
+            step?.let { put("step", it) }
+            paymentMethod?.let { put("paymentMethod", it) }
+            if (completed) put("completed", true)
+            orderId?.let { put("orderId", it) }
+        }
+        if (body.isEmpty()) return
+        runCatching { api.updateCheckoutSession(sessionId, body) }
+    }
+
     suspend fun placeOrder(
         items: List<CartItem>,
         profileId: String,
@@ -479,6 +522,7 @@ class AppRepository @Inject constructor(
             val orders   = api.getAllOrders().body()   ?: emptyList()
             val tags     = api.getAllQrTags().body()   ?: emptyList()
             val coupons  = runCatching { api.getAllCoupons().body() ?: emptyList() }.getOrDefault(emptyList())
+            val checkoutSessions = runCatching { api.getAllCheckoutSessions().body() ?: emptyList() }.getOrDefault(emptyList())
 
             // ─ Lifetime KPIs ─────────────────────────────────────────────────
             // Pending orders haven't been confirmed/paid yet — don't count them
@@ -523,6 +567,19 @@ class AppRepository @Inject constructor(
 
             val recentOrders = orders.sortedByDescending { it.createdAt }.take(10)
 
+            // ─ Checkout funnel: drop-out & abandonment ────────────────────────
+            // A session that never reached completed=true — regardless of which
+            // step it stalled at — counts as abandoned. "Drop-out by step" buckets
+            // each abandoned session under the furthest step it reached, so you
+            // can see exactly where in the funnel people are quitting.
+            val sessionsStarted = checkoutSessions.size
+            val sessionsCompleted = checkoutSessions.count { it.completed }
+            val abandonedSessions = checkoutSessions.filter { !it.completed }
+            val abandonmentRate = if (sessionsStarted > 0) abandonedSessions.size.toDouble() / sessionsStarted else 0.0
+            val conversionRate = if (sessionsStarted > 0) sessionsCompleted.toDouble() / sessionsStarted else 0.0
+            val abandonedCartValue = abandonedSessions.sumOf { it.cartValue }
+            val dropOutByStep = abandonedSessions.groupBy { it.step }.mapValues { it.value.size }
+
             Result.success(
                 AdminMetrics(
                     totalUsers = users.size,
@@ -542,7 +599,14 @@ class AppRepository @Inject constructor(
                     dailyOrderCount = dailyOrderCount,
                     allUsers = users.sortedByDescending { it.createdAt },
                     allOrders = orders.sortedByDescending { it.createdAt },
-                    allCoupons = coupons
+                    allCoupons = coupons,
+                    checkoutSessionsStarted = sessionsStarted,
+                    checkoutSessionsCompleted = sessionsCompleted,
+                    checkoutAbandonmentRate = abandonmentRate,
+                    checkoutConversionRate = conversionRate,
+                    abandonedCartValue = abandonedCartValue,
+                    dropOutByStep = dropOutByStep,
+                    allCheckoutSessions = checkoutSessions.sortedByDescending { it.startedAt }
                 )
             )
         } catch (e: Exception) {

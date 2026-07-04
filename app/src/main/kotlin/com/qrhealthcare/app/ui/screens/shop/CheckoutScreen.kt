@@ -56,6 +56,10 @@ fun CheckoutScreen(
 
     var attemptedSubmit by remember { mutableStateOf(false) }
 
+    // "Checkout started" for drop-out/abandonment reporting — fired once per
+    // session the moment this screen is shown, before any data is entered.
+    LaunchedEffect(Unit) { cartViewModel.startCheckoutTracking() }
+
     fun phoneValid(p: String) = p.trim().length >= 8 && p.trim().all { it.isDigit() || it in "+ -()" }
 
     val nameError = attemptedSubmit && fullName.isBlank()

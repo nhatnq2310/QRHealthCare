@@ -208,6 +208,59 @@ private fun OverviewTab(m: AdminMetrics) {
             }
         }
 
+        // ── Checkout funnel: conversion, abandonment & drop-out by step ─────────
+        item {
+            Text("Phễu Thanh Toán (Checkout Funnel)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        }
+        if (m.checkoutSessionsStarted > 0) {
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    KpiCard("Tỷ lệ chuyển đổi", "${(m.checkoutConversionRate * 100).let { "%.1f".format(it) }}%",
+                        Icons.Default.TrendingUp, Color(0xFFE8F5E9), modifier = Modifier.weight(1f), compact = true)
+                    KpiCard("Tỷ lệ bỏ dở", "${(m.checkoutAbandonmentRate * 100).let { "%.1f".format(it) }}%",
+                        Icons.Default.TrendingDown, Color(0xFFFFEBEE), modifier = Modifier.weight(1f), compact = true)
+                }
+            }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    KpiCard("Đã bắt đầu", m.checkoutSessionsStarted.toString(), Icons.Default.PlayArrow,
+                        Color(0xFFE3F2FD), modifier = Modifier.weight(1f), compact = true)
+                    KpiCard("Hoàn tất", m.checkoutSessionsCompleted.toString(), Icons.Default.CheckCircle,
+                        Color(0xFFE8F5E9), modifier = Modifier.weight(1f), compact = true)
+                    KpiCard("Giá trị bỏ dở", formatVND(m.abandonedCartValue), Icons.Default.MoneyOff,
+                        Color(0xFFFFF3E0), modifier = Modifier.weight(1f), compact = true)
+                }
+            }
+            if (m.dropOutByStep.isNotEmpty()) {
+                item {
+                    Card(shape = RoundedCornerShape(12.dp)) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Bỏ dở ở bước nào", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            Text("Trong số các lượt bỏ dở, dừng lại xa nhất ở bước:",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(modifier = Modifier.height(12.dp))
+                            val maxCount = (m.dropOutByStep.values.maxOrNull() ?: 1).coerceAtLeast(1)
+                            listOf(
+                                1 to "1. Thông tin giao hàng",
+                                2 to "2. Chọn hồ sơ",
+                                3 to "3. Chọn phương thức TT"
+                            ).forEach { (stepNum, label) ->
+                                val count = m.dropOutByStep[stepNum] ?: 0
+                                StatusBarRow(label, count, maxCount, Color(0xFFEF5350))
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            item {
+                Card(shape = RoundedCornerShape(12.dp)) {
+                    Text("Chưa có dữ liệu phễu thanh toán.", modifier = Modifier.padding(16.dp),
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+
         // ── Top products ───────────────────────────────────────────────────────
         if (m.productSalesCounts.isNotEmpty()) {
             item {
