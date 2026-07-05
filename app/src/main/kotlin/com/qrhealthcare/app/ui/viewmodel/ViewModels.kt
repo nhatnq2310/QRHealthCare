@@ -330,6 +330,87 @@ class ProfileViewModel @Inject constructor(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// SUBSCRIPTION VIEW MODEL (gói duy trì lưu trữ hồ sơ)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+data class SubscriptionState(
+    val subscription: Subscription? = null,   // null = trial not started yet (no profiles created)
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    // Plan-selection UI state, live on the subscription screen
+    val selectedPlan: String = "monthly",      // "monthly" | "flexible" | "yearly"
+    val extraProfilesInput: Int = 0,
+    val paymentRef: String = "",
+    val isProcessing: Boolean = false,
+    val renewSuccess: Boolean = false
+) {
+    val computedAmount: Long get() = SubscriptionPricing.computeAmount(
+        plan = if (selectedPlan == "flexible") "monthly" else selectedPlan,
+        extraProfiles = if (selectedPlan == "flexible") extraProfilesInput else 0
+    )
+    /** Show a reminder banner in the app at 7 and 3 days before expiry. */
+    val shouldShowReminder: Boolean get() {
+        val sub = subscription ?: return false
+        if (sub.status != "trial" && sub.status != "active") return false
+        val d = sub.daysRemaining
+        return d in 0..7
+    }
+}
+
+@HiltViewModel
+class SubscriptionViewModel @Inject constructor(
+    private val repo: AppRepository
+) : ViewModel() {
+
+    private val _state = MutableStateFlow(SubscriptionState())
+    val state: StateFlow<SubscriptionState> = _state.asStateFlow()
+
+    fun load() {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+            repo.getMySubscription().fold(
+                onSuccess = { sub -> _state.update { it.copy(subscription = sub, isLoading = false) } },
+                onFailure = { err -> _state.update { it.copy(error = err.message ?: err.toString(), isLoading = false) } }
+            )
+        }
+    }
+
+    fun selectPlan(plan: String) = _state.update { it.copy(selectedPlan = plan) }
+    fun setExtraProfiles(n: Int) = _state.update { it.copy(extraProfilesInput = n.coerceIn(0, 50)) }
+    fun setPaymentRef(ref: String) = _state.update { it.copy(paymentRef = ref) }
+
+    fun confirmPayment(onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            _state.update { it.copy(isProcessing = true, error = null) }
+            val plan = _state.value.selectedPlan
+            val extra = if (plan == "flexible") _state.value.extraProfilesInput else 0
+            val backendPlan = if (plan == "flexible") "flexible" else plan
+            repo.renewSubscription(backendPlan, extra, _state.value.paymentRef).fold(
+                onSuccess = { sub ->
+                    _state.update { it.copy(isProcessing = false, subscription = sub, renewSuccess = true) }
+                    onResult(true, null)
+                },
+                onFailure = { err ->
+                    _state.update { it.copy(isProcessing = false, error = err.message) }
+                    onResult(false, err.message)
+                }
+            )
+        }
+    }
+
+    fun cancel(onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            repo.cancelSubscription().fold(
+                onSuccess = { sub -> _state.update { it.copy(subscription = sub) }; onResult(true, null) },
+                onFailure = { onResult(false, it.message) }
+            )
+        }
+    }
+
+    fun dismissRenewSuccess() = _state.update { it.copy(renewSuccess = false) }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // SHOP VIEW MODEL
 // ═══════════════════════════════════════════════════════════════════════════════
 

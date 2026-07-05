@@ -26,9 +26,13 @@ fun AccountSettingsScreen(
     onLogout: () -> Unit,
     onOrderHistory: () -> Unit = {},
     onUserGuide: () -> Unit = {},
-    viewModel: AuthViewModel = com.qrhealthcare.app.ui.util.activityViewModel()
+    onSubscription: () -> Unit = {},
+    viewModel: AuthViewModel = com.qrhealthcare.app.ui.util.activityViewModel(),
+    subscriptionViewModel: com.qrhealthcare.app.ui.viewmodel.SubscriptionViewModel = hiltViewModel()
 ) {
     val state by viewModel.authState.collectAsState()
+    val subState by subscriptionViewModel.state.collectAsState()
+    LaunchedEffect(Unit) { subscriptionViewModel.load() }
     var showLogoutConfirm by remember { mutableStateOf(false) }
     var showAddressDialog by remember { mutableStateOf(false) }
     var showChangePasswordDialog by remember { mutableStateOf(false) }
@@ -188,6 +192,40 @@ fun AccountSettingsScreen(
                 InfoRow(Icons.Default.Info, "Phiên Bản", "1.0.0 (Beta)")
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 InfoRow(Icons.Default.Security, "Bảo Mật", "Dữ liệu mã hóa an toàn")
+            }
+        }
+
+        // ── Subscription ─────────────────────────────────────────────────────
+        Text("Gói Duy Trì Hồ Sơ", style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+
+        Card(shape = RoundedCornerShape(12.dp)) {
+            Column {
+                val sub = subState.subscription
+                LinkRow(
+                    Icons.Default.WorkspacePremium,
+                    "Gói Duy Trì Lưu Trữ Hồ Sơ",
+                    onSubscription
+                )
+                if (sub != null) {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            when (sub.status) {
+                                "trial" -> "Dùng thử — còn ${sub.daysRemaining} ngày"
+                                "active" -> "Đang hoạt động — còn ${sub.daysRemaining} ngày"
+                                "expired" -> "Đã hết hạn — hồ sơ đang bị khóa"
+                                else -> "Đã hủy — hồ sơ đang bị khóa"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (sub.status == "expired" || sub.status == "cancelled")
+                                MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
 

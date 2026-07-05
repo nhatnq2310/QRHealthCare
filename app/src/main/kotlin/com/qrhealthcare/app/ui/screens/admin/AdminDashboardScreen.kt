@@ -261,6 +261,47 @@ private fun OverviewTab(m: AdminMetrics) {
             }
         }
 
+        // ── Subscriptions: gói duy trì lưu trữ hồ sơ ─────────────────────────────
+        item {
+            Text("Đăng Ký Gói Duy Trì Hồ Sơ", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        }
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                KpiCard("Đang hoạt động", m.subscriptionStats.activeCount.toString(), Icons.Default.WorkspacePremium,
+                    Color(0xFFE8F5E9), modifier = Modifier.weight(1f), compact = true)
+                KpiCard("Dùng thử", m.subscriptionStats.trialCount.toString(), Icons.Default.Redeem,
+                    Color(0xFFE3F2FD), modifier = Modifier.weight(1f), compact = true)
+                KpiCard("Hết hạn/Đã hủy", (m.subscriptionStats.expiredCount + m.subscriptionStats.cancelledCount).toString(),
+                    Icons.Default.LockClock, Color(0xFFFFEBEE), modifier = Modifier.weight(1f), compact = true)
+            }
+        }
+        item {
+            Card(shape = RoundedCornerShape(12.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Số Người Đăng Ký / Hủy Đăng Ký", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    listOf(
+                        Triple("Trong tuần", m.subscriptionStats.subscribersWeek, m.subscriptionStats.cancellationsWeek),
+                        Triple("Trong tháng", m.subscriptionStats.subscribersMonth, m.subscriptionStats.cancellationsMonth),
+                        Triple("Trong năm", m.subscriptionStats.subscribersYear, m.subscriptionStats.cancellationsYear),
+                        Triple("Tất cả (Life long)", m.subscriptionStats.subscribersLifetime, m.subscriptionStats.cancellationsLifetime),
+                    ).forEach { (label, subs, cancels) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(label, style = MaterialTheme.typography.bodyMedium)
+                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                Text("✅ $subs", color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
+                                Text("❌ $cancels", color = Color(0xFFC62828), fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        HorizontalDivider()
+                    }
+                }
+            }
+        }
+
         // ── Top products ───────────────────────────────────────────────────────
         if (m.productSalesCounts.isNotEmpty()) {
             item {

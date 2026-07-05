@@ -26,6 +26,10 @@ const profileSchema = new mongoose.Schema(
     organDonor:         { type: Boolean, default: false },
     showOrganDonor:     { type: Boolean, default: true },
     isPrivate:          { type: Boolean, default: false },
+    // Forced private by the subscription system (unpaid/expired maintenance
+    // plan) — independent of the user's own isPrivate preference. Both flags
+    // OR together in public-profile.js's privacy check.
+    subscriptionFrozen: { type: Boolean, default: false },
     hiddenFields:       { type: [String], default: [] },
     emergencyContacts:  { type: [emergencyContact], default: [] },
     allergies:          { type: [allergy], default: [] },

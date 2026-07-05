@@ -199,4 +199,19 @@ interface ApiService {
         @Path("id") id: String,
         @Body body: Map<String, @JvmSuppressWildcards Any>
     ): Response<CheckoutSession>
+
+    // ─── Subscriptions (gói duy trì lưu trữ hồ sơ) ──────────────────────────────
+
+    /** Null body means no trial has started yet (user has no profiles at all). */
+    @GET("subscriptions")
+    suspend fun getSubscription(@Query("userId") userId: String): Response<Subscription?>
+
+    @POST("subscriptions/renew")
+    suspend fun renewSubscription(@Body body: Map<String, @JvmSuppressWildcards Any>): Response<Subscription>
+
+    @POST("subscriptions/cancel")
+    suspend fun cancelSubscription(@Body body: Map<String, @JvmSuppressWildcards Any>): Response<Subscription>
+
+    @GET("subscriptions/admin/stats")
+    suspend fun getSubscriptionAdminStats(): Response<SubscriptionAdminStats>
 }

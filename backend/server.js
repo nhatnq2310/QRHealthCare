@@ -12,6 +12,7 @@ import ordersRoutes   from "./src/routes/orders.js";
 import couponsRoutes  from "./src/routes/coupons.js";
 import uploadsRoutes  from "./src/routes/uploads.js";
 import checkoutSessionsRoutes from "./src/routes/checkout-sessions.js";
+import subscriptionsRoutes from "./src/routes/subscriptions.js";
 import publicProfileRoutes from "./src/routes/public-profile.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -44,6 +45,7 @@ app.use("/api/v1/orders",   ordersRoutes);
 app.use("/api/v1/coupons",  couponsRoutes);
 app.use("/api/v1/uploads",  uploadsRoutes);
 app.use("/api/v1/checkout-sessions", checkoutSessionsRoutes);
+app.use("/api/v1/subscriptions", subscriptionsRoutes);
 
 // Static file hosting for uploaded health documents. The same path is used by
 // both the Android client (which prepends the API host) and the public-profile

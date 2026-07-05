@@ -1,10 +1,12 @@
 package com.qrhealthcare.app.ui.screens.profile
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,17 +25,43 @@ import com.qrhealthcare.app.ui.viewmodel.ProfileViewModel
 fun ManageProfileScreen(
     navController: NavController,
     viewModel: ProfileViewModel = hiltViewModel(),
-    authViewModel: AuthViewModel = com.qrhealthcare.app.ui.util.activityViewModel()
+    authViewModel: AuthViewModel = com.qrhealthcare.app.ui.util.activityViewModel(),
+    subscriptionViewModel: com.qrhealthcare.app.ui.viewmodel.SubscriptionViewModel = hiltViewModel()
 ) {
     val state by viewModel.listState.collectAsState()
     val authState by authViewModel.authState.collectAsState()
+    val subState by subscriptionViewModel.state.collectAsState()
     var profileTypeChoice by remember { mutableStateOf("human") }
     var showLinkDialog by remember { mutableStateOf(false) }
     var linkTargetProfileId by remember { mutableStateOf("") }
+    var showSubscriptionPopup by remember { mutableStateOf(false) }
     // For the "Xem QR" dialog
     var qrsDialogProfile by remember { mutableStateOf<Profile?>(null) }
     var qrsDialogTags by remember { mutableStateOf<List<com.qrhealthcare.app.data.model.QrTag>>(emptyList()) }
     var qrsDialogLoading by remember { mutableStateOf(false) }
+
+    // Effective slot limit: base 5, or 5+extraProfiles while an active
+    // subscription grants extra room via the flexible plan. If the plan is
+    // expired/cancelled, creation is blocked outright regardless of count —
+    // the backend is authoritative on this, this is just for the UI hint.
+    val sub = subState.subscription
+    val totalSlots = sub?.totalSlots ?: 5
+    val isBlocked = sub?.isBlocked == true
+    val canCreateProfile = !isBlocked && state.profiles.size < totalSlots
+
+    LaunchedEffect(Unit) { subscriptionViewModel.load() }
+
+    if (showSubscriptionPopup) {
+        SubscriptionRequiredDialog(
+            reason = if (isBlocked) "Gói duy trì lưu trữ hồ sơ của bạn đã hết hạn hoặc đã bị hủy."
+                     else "Bạn đã đạt giới hạn $totalSlots hồ sơ.",
+            onUpgrade = {
+                showSubscriptionPopup = false
+                navController.navigate(Routes.SUBSCRIPTION)
+            },
+            onDismiss = { showSubscriptionPopup = false }
+        )
+    }
 
     LaunchedEffect(authState.isInitialized, authState.isLoggedIn) {
         // Wait until the session has been read from disk at least once,
@@ -112,7 +140,13 @@ fun ManageProfileScreen(
                     }
                     Spacer(modifier = Modifier.height(10.dp))
                     Button(
-                        onClick = { navController.navigate(Routes.createProfile(profileTypeChoice)) },
+                        onClick = {
+                            if (canCreateProfile) {
+                                navController.navigate(Routes.createProfile(profileTypeChoice))
+                            } else {
+                                showSubscriptionPopup = true
+                            }
+                        },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.onPrimary,
                             contentColor = MaterialTheme.colorScheme.primary
@@ -121,9 +155,9 @@ fun ManageProfileScreen(
                     ) {
                         Text("Tiếp Theo →", fontWeight = FontWeight.Bold)
                     }
-                    if (state.profiles.size >= 5) {
+                    if (!canCreateProfile) {
                         Spacer(modifier = Modifier.height(6.dp))
-                        Text("⚠️ Đã đạt giới hạn 5 hồ sơ", style = MaterialTheme.typography.bodySmall,
+                        Text("⚠️ Đã đạt giới hạn $totalSlots hồ sơ — nâng cấp gói duy trì để thêm", style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f))
                     }
                 }
@@ -132,10 +166,32 @@ fun ManageProfileScreen(
 
         // ── Profile list header ──────────────────────────────────────────────
         item {
-            Text("Quản Lý Hồ Sơ (${state.profiles.size}/5)",
+            Text("Quản Lý Hồ Sơ (${state.profiles.size}/$totalSlots)",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary)
+        }
+
+        // ── Subscription reminder banner (7 / 3 days before expiry) ──────────
+        if (subState.shouldShowReminder) {
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.clickable { navController.navigate(Routes.SUBSCRIPTION) }
+                ) {
+                    Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Notifications, contentDescription = null)
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Gói duy trì hồ sơ sắp hết hạn", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                            Text("Còn ${sub?.daysRemaining ?: 0} ngày — gia hạn ngay để tránh bị khóa hồ sơ",
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
+                    }
+                }
+            }
         }
 
         if (state.isLoading) {
@@ -377,5 +433,31 @@ private fun ShowProfileQrsDialog(
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Đóng") } }
+    )
+}
+
+@Composable
+private fun SubscriptionRequiredDialog(
+    reason: String,
+    onUpgrade: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Default.WorkspacePremium, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp)) },
+        title = { Text("Cần Gói Duy Trì Hồ Sơ", fontWeight = FontWeight.Bold) },
+        text = {
+            Column {
+                Text(reason, style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "Đăng ký gói duy trì lưu trữ hồ sơ để tạo thêm hồ sơ mới và giữ hồ sơ của bạn luôn hiển thị đầy đủ.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = { Button(onClick = onUpgrade) { Text("Xem Các Gói") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Để Sau") } }
     )
 }

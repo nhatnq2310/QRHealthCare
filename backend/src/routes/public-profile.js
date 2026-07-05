@@ -19,13 +19,17 @@ function pickPublic(profile) {
   const p = profile.toJSON();
   const hidden = new Set(profile.hiddenFields || []);
   const emptyHidden = (profile.hiddenFields || []).length === 0;
+  // Frozen for non-payment of the maintenance subscription behaves exactly
+  // like the user's own isPrivate toggle — it's a second, independent reason
+  // to force the same "only always-public fields" view.
+  const forcedPrivate = !!profile.isPrivate || !!profile.subscriptionFrozen;
 
-  const out = { isPrivate: !!profile.isPrivate };
+  const out = { isPrivate: !!profile.isPrivate, subscriptionFrozen: !!profile.subscriptionFrozen };
 
   for (const [k, v] of Object.entries(p)) {
     if (ALWAYS_PUBLIC.has(k)) {
       out[k] = v;                       // always visible
-    } else if (!profile.isPrivate) {
+    } else if (!forcedPrivate) {
       out[k] = v;                       // public profile → everything
     } else if (emptyHidden) {
       // private + no specific boxes → hide everything non-essential
@@ -123,7 +127,11 @@ function renderPage(p, tagCode, host) {
     <div class="sub">Mã: ${escapeHtml(tagCode)}</div>
   </div>
   <div class="wrap">
-    ${p.isPrivate ? `<div class="private-warn">🔒 Hồ sơ riêng tư — chỉ hiển thị thông tin cơ bản. Liên hệ chủ hồ sơ để biết thêm chi tiết.</div>` : ""}
+    ${p.subscriptionFrozen
+        ? `<div class="private-warn">🔒 Hồ sơ tạm khóa do gói duy trì lưu trữ đã hết hạn — chỉ hiển thị thông tin cơ bản. Chủ hồ sơ cần gia hạn để mở lại đầy đủ thông tin.</div>`
+        : p.isPrivate
+          ? `<div class="private-warn">🔒 Hồ sơ riêng tư — chỉ hiển thị thông tin cơ bản. Liên hệ chủ hồ sơ để biết thêm chi tiết.</div>`
+          : ""}
 
     <div class="card">
       ${row("Giới tính", p.gender)}

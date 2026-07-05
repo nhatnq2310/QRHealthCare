@@ -224,6 +224,9 @@ class AppRepository @Inject constructor(
         return match?.groupValues?.get(1)
     }
 
+    private fun isSubscriptionRequiredError(raw: String): Boolean =
+        Regex("\"needsSubscription\"\\s*:\\s*true").containsMatchIn(raw)
+
     // ═══════════════════════════════════════════════════════════════════════
     // PROFILES
     // ═══════════════════════════════════════════════════════════════════════
@@ -257,18 +260,22 @@ class AppRepository @Inject constructor(
 
     suspend fun createProfile(profile: Profile): Result<Profile> {
         return try {
-            // Enforce max 5 profiles per user
             val userId = session.userId.first() ?: return Result.failure(Exception("Chưa đăng nhập"))
-            val existing = api.getProfilesByUser(userId).body() ?: emptyList()
-            if (existing.size >= 5) {
-                return Result.failure(Exception("Bạn đã đạt giới hạn 5 hồ sơ"))
-            }
 
+            // Slot limit (base 5 + any extra purchased via the subscription's
+            // flexible plan) is enforced authoritatively server-side, since it
+            // depends on subscription status which can change server-side
+            // (expiry) independent of anything the client knows.
             val response = api.createProfile(profile.copy(userId = userId, createdAt = System.currentTimeMillis()))
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
-                Result.failure(Exception("Không thể tạo hồ sơ"))
+                val raw = response.errorBody()?.string() ?: ""
+                if (response.code() == 403 && isSubscriptionRequiredError(raw)) {
+                    Result.failure(SubscriptionRequiredException(extractErrorMessage(raw) ?: "Cần đăng ký gói duy trì lưu trữ hồ sơ"))
+                } else {
+                    Result.failure(Exception(extractErrorMessage(raw) ?: "Không thể tạo hồ sơ"))
+                }
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -293,6 +300,69 @@ class AppRepository @Inject constructor(
             val response = api.deleteProfile(id)
             if (response.isSuccessful) Result.success(Unit)
             else Result.failure(Exception("Không thể xóa hồ sơ"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SUBSCRIPTION (gói duy trì lưu trữ hồ sơ)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /** Null = user has no profiles yet, so no trial has started. */
+    suspend fun getMySubscription(): Result<Subscription?> {
+        return try {
+            val userId = session.userId.first() ?: return Result.failure(Exception("Chưa đăng nhập"))
+            val response = api.getSubscription(userId)
+            if (response.isSuccessful) Result.success(response.body())
+            else Result.failure(Exception("Không thể tải thông tin đăng ký"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Pay for/renew the maintenance plan via VietQR. [plan] is "monthly",
+     * "flexible", or "yearly"; [extraProfiles] only applies meaningfully to
+     * "flexible" (ignored — always 0 — for the other two on the backend's
+     * own validation, but we pass through what the UI collected either way).
+     */
+    suspend fun renewSubscription(plan: String, extraProfiles: Int, paymentRef: String): Result<Subscription> {
+        return try {
+            val userId = session.userId.first() ?: return Result.failure(Exception("Chưa đăng nhập"))
+            val body = mapOf(
+                "userId" to userId,
+                "plan" to plan,
+                "extraProfiles" to extraProfiles,
+                "paymentRef" to paymentRef
+            )
+            val response = api.renewSubscription(body)
+            if (response.isSuccessful && response.body() != null) Result.success(response.body()!!)
+            else {
+                val raw = response.errorBody()?.string() ?: ""
+                Result.failure(Exception(extractErrorMessage(raw) ?: "Không thể xử lý đăng ký"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun cancelSubscription(): Result<Subscription> {
+        return try {
+            val userId = session.userId.first() ?: return Result.failure(Exception("Chưa đăng nhập"))
+            val response = api.cancelSubscription(mapOf("userId" to userId))
+            if (response.isSuccessful && response.body() != null) Result.success(response.body()!!)
+            else Result.failure(Exception("Không thể hủy đăng ký"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getSubscriptionAdminStats(): Result<SubscriptionAdminStats> {
+        return try {
+            val response = api.getSubscriptionAdminStats()
+            if (response.isSuccessful && response.body() != null) Result.success(response.body()!!)
+            else Result.failure(Exception("Không thể tải thống kê đăng ký"))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -528,6 +598,7 @@ class AppRepository @Inject constructor(
             val tags     = api.getAllQrTags().body()   ?: emptyList()
             val coupons  = runCatching { api.getAllCoupons().body() ?: emptyList() }.getOrDefault(emptyList())
             val checkoutSessions = runCatching { api.getAllCheckoutSessions().body() ?: emptyList() }.getOrDefault(emptyList())
+            val subscriptionStats = runCatching { api.getSubscriptionAdminStats().body() ?: SubscriptionAdminStats() }.getOrDefault(SubscriptionAdminStats())
 
             // ─ Lifetime KPIs ─────────────────────────────────────────────────
             // Pending orders haven't been confirmed/paid yet — don't count them
@@ -611,7 +682,8 @@ class AppRepository @Inject constructor(
                     checkoutConversionRate = conversionRate,
                     abandonedCartValue = abandonedCartValue,
                     dropOutByStep = dropOutByStep,
-                    allCheckoutSessions = checkoutSessions.sortedByDescending { it.startedAt }
+                    allCheckoutSessions = checkoutSessions.sortedByDescending { it.startedAt },
+                    subscriptionStats = subscriptionStats
                 )
             )
         } catch (e: Exception) {

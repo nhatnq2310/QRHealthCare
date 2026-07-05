@@ -42,7 +42,8 @@ data class Profile(
     val organDonor: Boolean = false,         // true = "đã đăng ký", false = "chưa đăng ký"
     val showOrganDonor: Boolean = true,      // when registered, whether to display it publicly
     // Privacy settings
-    val isPrivate: Boolean = false,       // Master privacy toggle
+    val isPrivate: Boolean = false,               // Master privacy toggle
+    val subscriptionFrozen: Boolean = false,       // Forced private by unpaid maintenance plan — independent of isPrivate
     val hiddenFields: List<String> = emptyList(), // Field keys that are hidden when isPrivate=true
     // Nested data
     val emergencyContacts: List<EmergencyContact> = emptyList(),
@@ -234,6 +235,68 @@ data class CheckoutSession(
     val updatedAt: Long = 0L
 )
 
+// Thrown by AppRepository.createProfile() when the server rejects creation
+// because the maintenance subscription is required (limit reached / expired)
+// — lets the UI distinguish "show the subscription popup" from any other
+// generic profile-creation failure.
+class SubscriptionRequiredException(message: String) : Exception(message)
+
+// ─── Subscription (gói duy trì lưu trữ hồ sơ) ─────────────────────────────────
+
+data class SubscriptionHistoryEntry(
+    val event: String = "",          // trial_started | subscribed | renewed | cancelled | expired
+    val plan: String = "",
+    val amount: Long = 0L,
+    val extraProfiles: Int = 0,
+    val at: Long = 0L
+)
+
+/** Mirrors backend/src/models/Subscription.js. One doc per user. */
+data class Subscription(
+    val id: String = "",
+    val userId: String = "",
+    val status: String = "trial",    // trial | active | expired | cancelled
+    val plan: String = "trial",       // trial | monthly | flexible | yearly
+    val extraProfiles: Int = 0,
+    val periodStart: Long = 0L,
+    val periodEnd: Long = 0L,
+    val lastAmount: Long = 0L,
+    val paymentRef: String = "",
+    val history: List<SubscriptionHistoryEntry> = emptyList(),
+    val createdAt: Long = 0L,
+    val updatedAt: Long = 0L
+) {
+    val isActive: Boolean get() = status == "active"
+    val isTrial: Boolean get() = status == "trial"
+    val isBlocked: Boolean get() = status == "expired" || status == "cancelled"
+    val daysRemaining: Long get() = ((periodEnd - System.currentTimeMillis()) / (24 * 60 * 60 * 1000L)).coerceAtLeast(0)
+    val totalSlots: Int get() = 5 + (if (status == "active") extraProfiles else 0)
+}
+
+/**
+ * Mirrors computeAmount() in backend/src/routes/subscriptions.js — used to
+ * show the live total on the subscription screen as the user types the
+ * number of extra profiles. The backend is the source of truth for what's
+ * actually charged; this is purely for instant UI feedback.
+ */
+object SubscriptionPricing {
+    const val MONTHLY_BASE = 20_000L
+    const val YEARLY_BASE = 199_000L
+    const val EXTRA_PROFILE_PRICE = 5_000L
+
+    fun computeAmount(plan: String, extraProfiles: Int): Long {
+        val extra = extraProfiles.coerceAtLeast(0)
+        return if (plan == "yearly") YEARLY_BASE + extra * EXTRA_PROFILE_PRICE * 12
+        else MONTHLY_BASE + extra * EXTRA_PROFILE_PRICE
+    }
+}
+
+data class SubscriptionAdminStats(
+    val subscribersWeek: Int = 0, val subscribersMonth: Int = 0, val subscribersYear: Int = 0, val subscribersLifetime: Int = 0,
+    val cancellationsWeek: Int = 0, val cancellationsMonth: Int = 0, val cancellationsYear: Int = 0, val cancellationsLifetime: Int = 0,
+    val activeCount: Int = 0, val trialCount: Int = 0, val expiredCount: Int = 0, val cancelledCount: Int = 0
+)
+
 // ─── Admin ────────────────────────────────────────────────────────────────────
 
 data class AdminMetrics(
@@ -265,5 +328,6 @@ data class AdminMetrics(
     val checkoutConversionRate: Double = 0.0,     // 0..1 — completed / started
     val abandonedCartValue: Long = 0L,            // sum of cartValue on incomplete sessions
     val dropOutByStep: Map<Int, Int> = emptyMap(),// step → count of sessions that stalled there (furthest reached, never progressed further, not completed)
-    val allCheckoutSessions: List<CheckoutSession> = emptyList()
+    val allCheckoutSessions: List<CheckoutSession> = emptyList(),
+    val subscriptionStats: SubscriptionAdminStats = SubscriptionAdminStats()
 )

@@ -27,6 +27,7 @@ import com.qrhealthcare.app.ui.screens.profile.ManageProfileScreen
 import com.qrhealthcare.app.ui.screens.publicprofile.PublicProfileScreen
 import com.qrhealthcare.app.ui.screens.settings.AccountSettingsScreen
 import com.qrhealthcare.app.ui.screens.shop.*
+import com.qrhealthcare.app.ui.screens.subscription.SubscriptionScreen
 import com.qrhealthcare.app.ui.viewmodel.AuthViewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -50,6 +51,7 @@ object Routes {
     const val SETTINGS = "settings"
     const val ORDER_HISTORY = "orders"
     const val USER_GUIDE = "user_guide"
+    const val SUBSCRIPTION = "subscription"
 
     fun productDetail(slug: String) = "shop/$slug"
     fun publicProfile(tagCode: String) = "public/$tagCode"
@@ -193,6 +195,7 @@ fun AppNavigation() {
             )
         }
         composable(Routes.ADMIN) { MainScaffold(navController, authState.userRole) { AdminDashboardScreen() } }
+        composable(Routes.SUBSCRIPTION) { SubscriptionScreen(navController) }
         composable(Routes.SETTINGS) {
             MainScaffold(navController, authState.userRole) {
                 AccountSettingsScreen(
@@ -203,7 +206,8 @@ fun AppNavigation() {
                         }
                     },
                     onOrderHistory = { navController.navigate(Routes.ORDER_HISTORY) },
-                    onUserGuide = { navController.navigate(Routes.USER_GUIDE) }
+                    onUserGuide = { navController.navigate(Routes.USER_GUIDE) },
+                    onSubscription = { navController.navigate(Routes.SUBSCRIPTION) }
                 )
             }
         }
