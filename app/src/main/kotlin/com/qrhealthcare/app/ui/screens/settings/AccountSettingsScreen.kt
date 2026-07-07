@@ -17,6 +17,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.qrhealthcare.app.ui.viewmodel.AuthViewModel
 import kotlinx.coroutines.launch
@@ -36,6 +38,8 @@ fun AccountSettingsScreen(
     var showLogoutConfirm by remember { mutableStateOf(false) }
     var showAddressDialog by remember { mutableStateOf(false) }
     var showChangePasswordDialog by remember { mutableStateOf(false) }
+    var showPrivacyPolicyDialog by remember { mutableStateOf(false) }
+    var showTermsDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -255,10 +259,17 @@ fun AccountSettingsScreen(
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 LinkRow(Icons.Default.Mail, "Liên Hệ Hỗ Trợ") {}
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                LinkRow(Icons.Default.PrivacyTip, "Chính Sách Bảo Mật") {}
+                LinkRow(Icons.Default.PrivacyTip, "Chính Sách Bảo Mật") { showPrivacyPolicyDialog = true }
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                LinkRow(Icons.Default.Gavel, "Điều Khoản Dịch Vụ") {}
+                LinkRow(Icons.Default.Gavel, "Điều Khoản Dịch Vụ") { showTermsDialog = true }
             }
+        }
+
+        if (showPrivacyPolicyDialog) {
+            PolicyDialog(title = "Chính Sách Bảo Mật", body = PRIVACY_POLICY_TEXT, onDismiss = { showPrivacyPolicyDialog = false })
+        }
+        if (showTermsDialog) {
+            PolicyDialog(title = "Điều Khoản Dịch Vụ", body = TERMS_OF_SERVICE_TEXT, onDismiss = { showTermsDialog = false })
         }
 
         // ── Danger zone ──────────────────────────────────────────────────────
@@ -508,3 +519,138 @@ private fun ChangePasswordDialog(
         dismissButton = { TextButton(onClick = onDismiss, enabled = !saving) { Text("Hủy") } }
     )
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PRIVACY POLICY & TERMS OF SERVICE — shown in-app as a popup when tapped
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun PolicyDialog(title: String, body: String, onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.85f),
+            shape = RoundedCornerShape(16.dp),
+            tonalElevation = 4.dp
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, contentDescription = "Đóng") }
+                }
+                HorizontalDivider()
+                Column(
+                    modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(16.dp)
+                ) {
+                    Text(body, style = MaterialTheme.typography.bodyMedium)
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+                HorizontalDivider()
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth().padding(16.dp)
+                ) { Text("Đã Hiểu") }
+            }
+        }
+    }
+}
+
+// NOTE: this is a working draft tailored to what this app actually does
+// (health-profile creation, QR-tag linking, VietQR payments, the profile
+// storage subscription plan). It is NOT a substitute for review by a
+// Vietnamese lawyer before publishing — in particular the health-data and
+// payment-processing sections should be checked against Nghị định
+// 13/2023/NĐ-CP (bảo vệ dữ liệu cá nhân) before this goes live.
+private const val PRIVACY_POLICY_TEXT = """
+Cập nhật lần cuối: 07/07/2026
+
+1. THÔNG TIN CHÚNG TÔI THU THẬP
+
+Khi bạn sử dụng QR Healthcare, chúng tôi thu thập:
+• Thông tin tài khoản: email, họ tên, số điện thoại, địa chỉ giao hàng.
+• Thông tin hồ sơ y tế: họ tên, ngày sinh, nhóm máu, dị ứng, bệnh nền, liên hệ khẩn cấp, và các tài liệu y tế bạn tải lên (nếu có).
+• Thông tin đơn hàng: sản phẩm đã mua, địa chỉ giao hàng, phương thức thanh toán (VietQR hoặc COD).
+• Thông tin gói duy trì hồ sơ: trạng thái đăng ký, lịch sử thanh toán, ngày hết hạn.
+• Dữ liệu sử dụng: các bước bạn thực hiện trong quá trình đặt hàng, dùng để cải thiện trải nghiệm và giảm tỷ lệ bỏ dở giỏ hàng.
+
+2. MỤC ĐÍCH SỬ DỤNG
+
+Chúng tôi sử dụng thông tin trên để:
+• Tạo và hiển thị hồ sơ y tế của bạn khi có người quét mã QR (trong trường hợp khẩn cấp).
+• Xử lý đơn hàng, giao hàng và xác nhận thanh toán.
+• Quản lý gói duy trì lưu trữ hồ sơ và gửi thông báo nhắc gia hạn.
+• Liên hệ hỗ trợ khi bạn cần trợ giúp.
+
+3. HỒ SƠ Y TẾ — THÔNG TIN NHẠY CẢM
+
+Thông tin y tế của bạn được coi là dữ liệu cá nhân nhạy cảm. Bạn có toàn quyền kiểm soát:
+• Bạn quyết định hồ sơ ở chế độ công khai hay riêng tư, và có thể chọn ẩn từng mục thông tin cụ thể.
+• Khi hồ sơ ở chế độ riêng tư, người quét mã QR chỉ thấy các thông tin thiết yếu cho cấp cứu (nhóm máu, dị ứng nghiêm trọng, liên hệ khẩn cấp).
+• Nếu gói duy trì lưu trữ hồ sơ hết hạn mà chưa gia hạn, hồ sơ của bạn sẽ tạm thời chuyển sang chế độ riêng tư cho đến khi bạn thanh toán lại — dữ liệu của bạn không bị xóa, chỉ tạm ẩn.
+
+4. THANH TOÁN
+
+Chúng tôi không lưu trữ thông tin tài khoản ngân hàng của bạn. Thanh toán qua VietQR được thực hiện trực tiếp qua ứng dụng ngân hàng của bạn; chúng tôi chỉ nhận được xác nhận giao dịch và nội dung chuyển khoản để đối chiếu đơn hàng.
+
+5. LƯU TRỮ DỮ LIỆU
+
+Dữ liệu được lưu trữ trên hệ thống máy chủ (MongoDB) có kiểm soát truy cập. Chúng tôi lưu trữ thông tin của bạn trong suốt thời gian bạn sử dụng dịch vụ, và có thể xóa hồ sơ theo yêu cầu của bạn.
+
+6. CHIA SẺ THÔNG TIN
+
+Chúng tôi không bán thông tin cá nhân của bạn cho bên thứ ba. Thông tin hồ sơ y tế chỉ được hiển thị công khai (một phần hoặc toàn bộ, tùy cài đặt riêng tư của bạn) khi có người quét mã QR tương ứng.
+
+7. QUYỀN CỦA BẠN
+
+Bạn có quyền: xem, chỉnh sửa, hoặc xóa hồ sơ của mình bất cứ lúc nào; yêu cầu xuất toàn bộ dữ liệu cá nhân; đóng tài khoản.
+
+8. LIÊN HỆ
+
+Nếu có câu hỏi về chính sách này, vui lòng liên hệ qua mục "Liên Hệ Hỗ Trợ" trong ứng dụng.
+"""
+
+private const val TERMS_OF_SERVICE_TEXT = """
+Cập nhật lần cuối: 07/07/2026
+
+1. CHẤP NHẬN ĐIỀU KHOẢN
+
+Bằng việc tạo tài khoản và sử dụng QR Healthcare, bạn đồng ý với các điều khoản dưới đây.
+
+2. TÀI KHOẢN VÀ HỒ SƠ
+
+• Bạn chịu trách nhiệm về tính chính xác của thông tin hồ sơ y tế mà bạn nhập, vì thông tin này có thể được sử dụng trong tình huống khẩn cấp.
+• Mỗi tài khoản được lưu trữ tối đa 5 hồ sơ miễn phí. Muốn thêm hồ sơ, bạn cần đăng ký Gói Linh Hoạt hoặc nâng cấp gói duy trì.
+
+3. GÓI DUY TRÌ LƯU TRỮ HỒ SƠ
+
+• Mỗi tài khoản được dùng thử miễn phí 30 ngày kể từ khi tạo hồ sơ đầu tiên.
+• Sau thời gian dùng thử, cần đăng ký một trong các gói: Gói Tháng (20.000đ/tháng), Gói Linh Hoạt (20.000đ + 5.000đ/hồ sơ thêm/tháng), hoặc Gói Năm (199.000đ/năm, hồ sơ thêm chỉ 48.000đ/năm).
+• Nếu không gia hạn đúng hạn, hồ sơ của bạn sẽ chuyển sang chế độ riêng tư (chỉ hiển thị thông tin cơ bản khi quét QR) cho đến khi bạn thanh toán lại.
+• Bạn có thể hủy gói bất cứ lúc nào; việc hủy có hiệu lực ngay và hồ sơ sẽ chuyển sang chế độ riêng tư.
+
+4. ĐẶT HÀNG VÀ THANH TOÁN
+
+• Đơn hàng được xác nhận sau khi bạn hoàn tất bước thanh toán (VietQR hoặc thanh toán khi nhận hàng - COD).
+• Thanh toán qua VietQR yêu cầu bạn nhập đúng nội dung chuyển khoản để chúng tôi đối chiếu và xử lý đơn hàng.
+• Sản phẩm được giao trong vòng 24 giờ kể từ khi đặt hàng, tùy khu vực.
+
+5. SỬ DỤNG MÃ QR
+
+• Mỗi mã QR gắn với một hồ sơ cụ thể. Việc chia sẻ mã QR đồng nghĩa với việc cho phép người khác xem thông tin hồ sơ (theo mức độ riêng tư bạn đã cài đặt).
+• Bạn chịu trách nhiệm bảo quản sticker/thẻ/tag QR đã mua.
+
+6. GIỚI HẠN TRÁCH NHIỆM
+
+Thông tin trong hồ sơ y tế chỉ mang tính chất hỗ trợ tham khảo trong tình huống khẩn cấp, không thay thế chẩn đoán hoặc tư vấn y tế chuyên môn. Chúng tôi không chịu trách nhiệm về các quyết định y tế được đưa ra dựa trên thông tin hiển thị từ hồ sơ.
+
+7. CHẤM DỨT DỊCH VỤ
+
+Chúng tôi có quyền tạm ngưng hoặc chấm dứt tài khoản vi phạm điều khoản sử dụng, bao gồm hành vi gian lận thanh toán hoặc cung cấp thông tin sai sự thật gây ảnh hưởng đến an toàn của người khác.
+
+8. THAY ĐỔI ĐIỀU KHOẢN
+
+Chúng tôi có thể cập nhật điều khoản này theo thời gian. Phiên bản mới nhất luôn có sẵn trong mục Tài Khoản của ứng dụng.
+"""
