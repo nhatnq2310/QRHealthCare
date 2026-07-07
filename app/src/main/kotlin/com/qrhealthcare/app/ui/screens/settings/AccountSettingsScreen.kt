@@ -1,5 +1,8 @@
 package com.qrhealthcare.app.ui.screens.settings
 
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,6 +14,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -34,6 +39,8 @@ fun AccountSettingsScreen(
 ) {
     val state by viewModel.authState.collectAsState()
     val subState by subscriptionViewModel.state.collectAsState()
+    val context = LocalContext.current
+    var showSupportContactDialog by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { subscriptionViewModel.load() }
     var showLogoutConfirm by remember { mutableStateOf(false) }
     var showAddressDialog by remember { mutableStateOf(false) }
@@ -257,12 +264,35 @@ fun AccountSettingsScreen(
             Column {
                 LinkRow(Icons.Default.Help, "Hướng Dẫn Sử Dụng", onUserGuide)
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                LinkRow(Icons.Default.Mail, "Liên Hệ Hỗ Trợ") {}
+                LinkRow(Icons.Default.Mail, "Liên Hệ Hỗ Trợ") { showSupportContactDialog = true }
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 LinkRow(Icons.Default.PrivacyTip, "Chính Sách Bảo Mật") { showPrivacyPolicyDialog = true }
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 LinkRow(Icons.Default.Gavel, "Điều Khoản Dịch Vụ") { showTermsDialog = true }
             }
+        }
+
+        if (showSupportContactDialog) {
+            SupportContactDialog(
+                onDismiss = { showSupportContactDialog = false },
+                onOpenFanpage = {
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.facebook.com/profile.php?id=61587210686575"))
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        context.startActivity(intent)
+                    } catch (_: Exception) { /* no browser/FB app — silently ignore */ }
+                    showSupportContactDialog = false
+                },
+                onSendEmail = {
+                    try {
+                        val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:truongmtse171420@gmail.com"))
+                        intent.putExtra(Intent.EXTRA_SUBJECT, "Hỗ trợ QR Healthcare")
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        context.startActivity(intent)
+                    } catch (_: Exception) { /* no email app — silently ignore */ }
+                    showSupportContactDialog = false
+                }
+            )
         }
 
         if (showPrivacyPolicyDialog) {
@@ -654,3 +684,50 @@ Chúng tôi có quyền tạm ngưng hoặc chấm dứt tài khoản vi phạm 
 
 Chúng tôi có thể cập nhật điều khoản này theo thời gian. Phiên bản mới nhất luôn có sẵn trong mục Tài Khoản của ứng dụng.
 """
+
+@Composable
+private fun SupportContactDialog(
+    onDismiss: () -> Unit,
+    onOpenFanpage: () -> Unit,
+    onSendEmail: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Default.Mail, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(36.dp)) },
+        title = { Text("Liên Hệ Hỗ Trợ", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Chọn cách bạn muốn liên hệ với chúng tôi:", style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenFanpage).padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.OpenInNew, contentDescription = null, tint = Color(0xFF1877F2))
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text("Fanpage Facebook", fontWeight = FontWeight.SemiBold)
+                        Text("Nhắn tin trực tiếp qua Facebook", style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                HorizontalDivider()
+                Row(
+                    modifier = Modifier.fillMaxWidth().clickable(onClick = onSendEmail).padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Email, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text("Email", fontWeight = FontWeight.SemiBold)
+                        Text("truongmtse171420@gmail.com", style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Đóng") } }
+    )
+}
