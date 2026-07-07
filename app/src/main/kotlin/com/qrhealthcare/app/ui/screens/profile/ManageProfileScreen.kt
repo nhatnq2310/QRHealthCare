@@ -44,10 +44,13 @@ fun ManageProfileScreen(
     // subscription grants extra room via the flexible plan. If the plan is
     // expired/cancelled, creation is blocked outright regardless of count —
     // the backend is authoritative on this, this is just for the UI hint.
+    // Admins are fully exempt — the backend never creates a trial/limit for
+    // them, so subState.subscription will always be null for an admin user.
+    val isAdmin = authState.userRole == "admin"
     val sub = subState.subscription
     val totalSlots = sub?.totalSlots ?: 5
     val isBlocked = sub?.isBlocked == true
-    val canCreateProfile = !isBlocked && state.profiles.size < totalSlots
+    val canCreateProfile = isAdmin || (!isBlocked && state.profiles.size < totalSlots)
 
     LaunchedEffect(Unit) { subscriptionViewModel.load() }
 
@@ -166,7 +169,9 @@ fun ManageProfileScreen(
 
         // ── Profile list header ──────────────────────────────────────────────
         item {
-            Text("Quản Lý Hồ Sơ (${state.profiles.size}/$totalSlots)",
+            Text(
+                if (isAdmin) "Quản Lý Hồ Sơ (${state.profiles.size} — Không giới hạn)"
+                else "Quản Lý Hồ Sơ (${state.profiles.size}/$totalSlots)",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary)

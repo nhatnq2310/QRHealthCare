@@ -278,15 +278,19 @@ data class Subscription(
  * show the live total on the subscription screen as the user types the
  * number of extra profiles. The backend is the source of truth for what's
  * actually charged; this is purely for instant UI feedback.
+ * NOTE: yearly gets a discounted extra-profile rate — 4k/month-equivalent,
+ * billed as 12 months upfront = 48k/profile/year — vs. monthly/flexible's
+ * plain 5k/profile/month.
  */
 object SubscriptionPricing {
     const val MONTHLY_BASE = 20_000L
     const val YEARLY_BASE = 199_000L
-    const val EXTRA_PROFILE_PRICE = 5_000L
+    const val EXTRA_PROFILE_PRICE = 5_000L         // monthly & flexible
+    const val EXTRA_PROFILE_PRICE_YEARLY = 4_000L  // yearly: per month-equivalent, x12 below
 
     fun computeAmount(plan: String, extraProfiles: Int): Long {
         val extra = extraProfiles.coerceAtLeast(0)
-        return if (plan == "yearly") YEARLY_BASE + extra * EXTRA_PROFILE_PRICE * 12
+        return if (plan == "yearly") YEARLY_BASE + extra * EXTRA_PROFILE_PRICE_YEARLY * 12
         else MONTHLY_BASE + extra * EXTRA_PROFILE_PRICE
     }
 }

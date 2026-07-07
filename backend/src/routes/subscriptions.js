@@ -8,17 +8,19 @@ const DAY = 24 * 60 * 60 * 1000;
 const TRIAL_DAYS = 30;
 const MONTHLY_BASE = 20000;      // 20k / 30 days
 const YEARLY_BASE = 199000;      // 199k / 365 days
-const EXTRA_PROFILE_PRICE = 5000; // per extra profile, per 30-day period
+const EXTRA_PROFILE_PRICE = 5000;        // monthly & flexible: +5k / profile / month
+const EXTRA_PROFILE_PRICE_YEARLY = 4000; // yearly: discounted rate, +4k/month-equivalent x12 = 48k/profile/year
 
 // Total price for a plan + a given number of extra profile slots.
 // Exported via query endpoint below so the Android client can double check
 // the number it renders, but the client also computes this locally for the
 // live total shown while the user types.
+// NOTE: yearly gets a discounted extra-profile rate (4k/month-equivalent,
+// billed as 12 months upfront = 48k/profile/year) vs. monthly/flexible's
+// plain 5k/profile/month — this rewards committing to the yearly plan.
 function computeAmount(plan, extraProfiles) {
   const extra = Math.max(0, Number(extraProfiles) || 0);
-  if (plan === "yearly") return YEARLY_BASE + extra * EXTRA_PROFILE_PRICE * 12;
-  // monthly & flexible are the same billing shape — flexible is just monthly
-  // with extraProfiles > 0 typically, but we don't require that.
+  if (plan === "yearly") return YEARLY_BASE + extra * EXTRA_PROFILE_PRICE_YEARLY * 12;
   return MONTHLY_BASE + extra * EXTRA_PROFILE_PRICE;
 }
 

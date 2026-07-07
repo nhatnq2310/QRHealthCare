@@ -1,6 +1,7 @@
 import { Router } from "express";
 import Profile from "../models/Profile.js";
 import Subscription from "../models/Subscription.js";
+import User from "../models/User.js";
 
 const router = Router();
 
@@ -25,43 +26,51 @@ router.post("/", async (req, res) => {
     const userId = req.body?.userId;
     if (!userId) return res.status(400).json({ error: "userId là bắt buộc" });
 
-    const count = await Profile.countDocuments({ userId });
-    let sub = await Subscription.findOne({ userId });
+    // Admins are exempt from the maintenance-subscription system entirely —
+    // no trial, no slot limit, no freezing. This is a paywall for paying
+    // customers, not something that should ever block internal/admin use.
+    const user = await User.findById(userId).catch(() => null);
+    const isAdmin = user?.role === "admin";
 
-    if (!sub) {
-      // First profile ever for this user — start the 30-day free trial of
-      // the "gói duy trì lưu trữ hồ sơ" (profile-storage maintenance plan).
-      const now = Date.now();
-      sub = await Subscription.create({
-        userId,
-        status: "trial",
-        plan: "trial",
-        periodStart: now,
-        periodEnd: now + TRIAL_DAYS * 24 * 60 * 60 * 1000,
-        history: [{ event: "trial_started", plan: "trial", at: now }],
-      });
-    } else if ((sub.status === "trial" || sub.status === "active") && Date.now() > sub.periodEnd) {
-      // Lazy expiry check, same as GET /subscriptions.
-      sub.status = "expired";
-      sub.history.push({ event: "expired", plan: sub.plan, at: Date.now() });
-      await sub.save();
-      await Profile.updateMany({ userId }, { subscriptionFrozen: true });
-    }
+    if (!isAdmin) {
+      const count = await Profile.countDocuments({ userId });
+      let sub = await Subscription.findOne({ userId });
 
-    // Effective slot limit: base 5, plus any extra profiles purchased via the
-    // flexible plan — but only while the subscription is actually active
-    // (an expired/cancelled plan loses the extra slots, and blocks creation
-    // outright until renewed, regardless of count).
-    const isBlocked = sub.status === "expired" || sub.status === "cancelled";
-    const totalSlots = BASE_FREE_PROFILES + (sub.status === "active" ? sub.extraProfiles : 0);
+      if (!sub) {
+        // First profile ever for this user — start the 30-day free trial of
+        // the "gói duy trì lưu trữ hồ sơ" (profile-storage maintenance plan).
+        const now = Date.now();
+        sub = await Subscription.create({
+          userId,
+          status: "trial",
+          plan: "trial",
+          periodStart: now,
+          periodEnd: now + TRIAL_DAYS * 24 * 60 * 60 * 1000,
+          history: [{ event: "trial_started", plan: "trial", at: now }],
+        });
+      } else if ((sub.status === "trial" || sub.status === "active") && Date.now() > sub.periodEnd) {
+        // Lazy expiry check, same as GET /subscriptions.
+        sub.status = "expired";
+        sub.history.push({ event: "expired", plan: sub.plan, at: Date.now() });
+        await sub.save();
+        await Profile.updateMany({ userId }, { subscriptionFrozen: true });
+      }
 
-    if (isBlocked || count >= totalSlots) {
-      return res.status(403).json({
-        error: isBlocked
-          ? "Gói duy trì lưu trữ hồ sơ đã hết hạn. Vui lòng gia hạn để tạo thêm hồ sơ."
-          : "Bạn đã đạt giới hạn hồ sơ hiện tại. Nâng cấp gói duy trì để thêm hồ sơ.",
-        needsSubscription: true,
-      });
+      // Effective slot limit: base 5, plus any extra profiles purchased via the
+      // flexible plan — but only while the subscription is actually active
+      // (an expired/cancelled plan loses the extra slots, and blocks creation
+      // outright until renewed, regardless of count).
+      const isBlocked = sub.status === "expired" || sub.status === "cancelled";
+      const totalSlots = BASE_FREE_PROFILES + (sub.status === "active" ? sub.extraProfiles : 0);
+
+      if (isBlocked || count >= totalSlots) {
+        return res.status(403).json({
+          error: isBlocked
+            ? "Gói duy trì lưu trữ hồ sơ đã hết hạn. Vui lòng gia hạn để tạo thêm hồ sơ."
+            : "Bạn đã đạt giới hạn hồ sơ hiện tại. Nâng cấp gói duy trì để thêm hồ sơ.",
+          needsSubscription: true,
+        });
+      }
     }
 
     const p = await Profile.create(req.body);

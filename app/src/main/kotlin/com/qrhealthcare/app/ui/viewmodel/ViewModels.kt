@@ -344,10 +344,14 @@ data class SubscriptionState(
     val isProcessing: Boolean = false,
     val renewSuccess: Boolean = false
 ) {
-    val computedAmount: Long get() = SubscriptionPricing.computeAmount(
-        plan = if (selectedPlan == "flexible") "monthly" else selectedPlan,
-        extraProfiles = if (selectedPlan == "flexible") extraProfilesInput else 0
-    )
+    val computedAmount: Long get() {
+        // Both "flexible" (monthly-based) and "yearly" support the +5k/profile
+        // add-on; plain "monthly" does not (that's the whole point of picking
+        // "flexible" instead).
+        val supportsExtra = selectedPlan == "flexible" || selectedPlan == "yearly"
+        val basePlan = if (selectedPlan == "flexible") "monthly" else selectedPlan
+        return SubscriptionPricing.computeAmount(basePlan, if (supportsExtra) extraProfilesInput else 0)
+    }
     /** Show a reminder banner in the app at 7 and 3 days before expiry. */
     val shouldShowReminder: Boolean get() {
         val sub = subscription ?: return false
@@ -383,8 +387,8 @@ class SubscriptionViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(isProcessing = true, error = null) }
             val plan = _state.value.selectedPlan
-            val extra = if (plan == "flexible") _state.value.extraProfilesInput else 0
-            val backendPlan = if (plan == "flexible") "flexible" else plan
+            val extra = if (plan == "flexible" || plan == "yearly") _state.value.extraProfilesInput else 0
+            val backendPlan = plan // "monthly" | "flexible" | "yearly" — all valid as-is
             repo.renewSubscription(backendPlan, extra, _state.value.paymentRef).fold(
                 onSuccess = { sub ->
                     _state.update { it.copy(isProcessing = false, subscription = sub, renewSuccess = true) }

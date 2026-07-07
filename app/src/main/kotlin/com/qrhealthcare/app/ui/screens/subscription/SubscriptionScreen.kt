@@ -141,10 +141,25 @@ fun SubscriptionScreen(
 
                     PlanCard(
                         title = "Gói Năm", price = "199.000đ / năm",
-                        description = "Tiết kiệm hơn — duy trì tối đa 5 hồ sơ trong 1 năm",
+                        description = "Tiết kiệm hơn — duy trì tối đa 5 hồ sơ trong 1 năm. Thêm hồ sơ chỉ 4.000đ/tháng (48.000đ/năm) mỗi hồ sơ",
                         selected = state.selectedPlan == "yearly",
                         onClick = { viewModel.selectPlan("yearly") }
-                    )
+                    ) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        OutlinedTextField(
+                            value = if (state.extraProfilesInput == 0) "" else state.extraProfilesInput.toString(),
+                            onValueChange = { txt -> viewModel.setExtraProfiles(txt.filter(Char::isDigit).toIntOrNull() ?: 0) },
+                            label = { Text("Số hồ sơ muốn thêm") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "Tổng cộng: ${formatVND(com.qrhealthcare.app.data.model.SubscriptionPricing.computeAmount("yearly", state.extraProfilesInput))} / năm",
+                            fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
