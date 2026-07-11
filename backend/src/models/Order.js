@@ -4,7 +4,9 @@ import { idTransform } from "./User.js";
 const orderItem = new mongoose.Schema(
   {
     productId:        String,
+    productSlug:      { type: String, default: "" }, // used by "buy again" to look the product back up
     productName:      String,
+    imageUrl:         { type: String, default: "" },  // snapshot of the product image at order time
     price:            Number,
     quantity:         Number,
     emergencyContact: { type: String, default: "" }, // phone number entered at add-to-cart time
@@ -36,6 +38,8 @@ const orderSchema = new mongoose.Schema(
     status:        { type: String, default: "pending" },
     shippingAddress: { type: shippingAddress, default: () => ({}) }, // per-order delivery details
     qrTagIds:      { type: [String], default: [] },
+    isPromo:       { type: Boolean, default: false }, // true for the free-tag gift order (first paid subscription month)
+    shippingFee:   { type: Number, default: 0 },       // always 0 today — no fee system exists yet, but promo orders explicitly advertise "free shipping"
     createdAt:     { type: Number, default: () => Date.now() },
   },
   { toJSON: idTransform }

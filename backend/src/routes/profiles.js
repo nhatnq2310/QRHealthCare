@@ -1,4 +1,5 @@
 import { Router } from "express";
+import crypto from "crypto";
 import Profile from "../models/Profile.js";
 import Subscription from "../models/Subscription.js";
 import User from "../models/User.js";
@@ -91,6 +92,47 @@ router.delete("/:id", async (req, res) => {
   const p = await Profile.findByIdAndDelete(req.params.id).catch(() => null);
   if (!p) return res.status(404).json({ error: "Không tìm thấy hồ sơ" });
   res.json(p.toJSON());
+});
+
+// ─── Family notification device registration (subscription perk) ───────────
+// A family member opens a share link from the profile owner, taps "register",
+// and their device's FCM token gets attached here. From then on, while the
+// owner's subscription is active, that device gets a push every time this
+// profile's QR is scanned — plus a link that shows the FULL profile
+// regardless of the owner's privacy/freeze settings, via familyAccessToken.
+
+router.post("/:id/family-register", async (req, res) => {
+  try {
+    const { fcmToken } = req.body;
+    if (!fcmToken) return res.status(400).json({ error: "fcmToken là bắt buộc" });
+    const p = await Profile.findById(req.params.id).catch(() => null);
+    if (!p) return res.status(404).json({ error: "Không tìm thấy hồ sơ" });
+
+    if (!p.familyAccessToken) {
+      p.familyAccessToken = crypto.randomBytes(24).toString("hex");
+    }
+    if (!p.familyFcmTokens.includes(fcmToken)) {
+      p.familyFcmTokens.push(fcmToken);
+    }
+    await p.save();
+    res.json({ familyAccessToken: p.familyAccessToken });
+  } catch (err) {
+    console.error("[profiles.family-register]", err);
+    res.status(500).json({ error: "Không thể đăng ký thiết bị" });
+  }
+});
+
+router.post("/:id/family-unregister", async (req, res) => {
+  try {
+    const { fcmToken } = req.body;
+    const p = await Profile.findById(req.params.id).catch(() => null);
+    if (!p) return res.status(404).json({ error: "Không tìm thấy hồ sơ" });
+    p.familyFcmTokens = (p.familyFcmTokens || []).filter((t) => t !== fcmToken);
+    await p.save();
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: "Không thể hủy đăng ký thiết bị" });
+  }
 });
 
 export default router;

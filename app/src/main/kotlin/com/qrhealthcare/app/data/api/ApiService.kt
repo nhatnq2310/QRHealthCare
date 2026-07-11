@@ -129,6 +129,13 @@ interface ApiService {
     @DELETE("profiles/{id}")
     suspend fun deleteProfile(@Path("id") id: String): Response<Profile>
 
+    /** Register this device to receive a push notification whenever this profile's QR is scanned (subscription perk). Returns the family access token for the full-view link. */
+    @POST("profiles/{id}/family-register")
+    suspend fun registerFamilyDevice(@Path("id") id: String, @Body body: Map<String, String>): Response<Map<String, String>>
+
+    @POST("profiles/{id}/family-unregister")
+    suspend fun unregisterFamilyDevice(@Path("id") id: String, @Body body: Map<String, String>): Response<Map<String, Boolean>>
+
     // ─── Products ─────────────────────────────────────────────────────────────
 
     /** Get all products for the shop */
@@ -156,6 +163,10 @@ interface ApiService {
     /** Get all QR tags linked to a specific profile */
     @GET("qrtags")
     suspend fun getQrTagsByProfile(@Query("profileId") profileId: String): Response<List<QrTag>>
+
+    /** Admin use — fetch the QR tags generated for a given order, so admin can view/export the images. */
+    @GET("qrtags")
+    suspend fun getQrTagsByOrder(@Query("orderId") orderId: String): Response<List<QrTag>>
 
     /** Create a new QR tag (called when order is placed) */
     @POST("qrtags")

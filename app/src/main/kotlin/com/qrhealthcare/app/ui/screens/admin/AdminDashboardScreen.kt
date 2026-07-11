@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -24,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -370,6 +372,7 @@ private fun OrdersTab(m: AdminMetrics, viewModel: AdminViewModel) {
     editingOrder?.let { order ->
         OrderStatusDialog(
             order = order,
+            viewModel = viewModel,
             onSave = { newStatus ->
                 viewModel.updateOrderStatus(order, newStatus) { _, _ -> }
                 editingOrder = null
@@ -480,14 +483,24 @@ private fun AdminOrderCard(order: Order, onClick: () -> Unit) {
 }
 
 @Composable
-private fun OrderStatusDialog(order: Order, onSave: (String) -> Unit, onDismiss: () -> Unit) {
+private fun OrderStatusDialog(order: Order, viewModel: AdminViewModel, onSave: (String) -> Unit, onDismiss: () -> Unit) {
     var selected by remember(order.id) { mutableStateOf(order.status) }
+    val context = LocalContext.current
+    val orderTags by viewModel.orderTags.collectAsState()
+    val orderTagsLoading by viewModel.orderTagsLoading.collectAsState()
+
+    LaunchedEffect(order.id) { viewModel.loadTagsForOrder(order.id) }
+    DisposableEffect(Unit) { onDispose { viewModel.clearOrderTags() } }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) },
         title = { Text("Đơn #${order.id.takeLast(6).uppercase()}") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState())
+            ) {
                 // Order summary
                 Text("Tổng: ${formatVND(order.totalAmount)}",
                     style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold,
@@ -536,6 +549,48 @@ private fun OrderStatusDialog(order: Order, onSave: (String) -> Unit, onDismiss:
                             style = MaterialTheme.typography.bodySmall)
                     }
                 }
+                // ── QR tags for this order (ADMIN-ONLY: view + export image) ────
+                // Regular users never see the scannable image anywhere in the
+                // app — only admin, here, for handing off to the physical
+                // production vendor (sticker/card/tag maker).
+                if (orderTagsLoading) {
+                    Box(Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                    }
+                } else if (orderTags.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Mã QR (chỉ admin xem được):", style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold)
+                    orderTags.forEach { tag ->
+                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                            Column(modifier = Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                com.qrhealthcare.app.ui.components.QrCodeImage(
+                                    value = com.qrhealthcare.app.data.api.ApiClient.publicProfileUrl(tag.tagCode),
+                                    modifier = Modifier.size(140.dp)
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text("${tag.tagCode}  •  PIN: ${tag.pin}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.height(6.dp))
+                                OutlinedButton(onClick = {
+                                    val bitmap = com.qrhealthcare.app.ui.components.generateQrBitmap(
+                                        com.qrhealthcare.app.data.api.ApiClient.publicProfileUrl(tag.tagCode), 1024
+                                    )
+                                    val ok = com.qrhealthcare.app.ui.components.saveQrBitmapToGallery(context, bitmap, "QR_${tag.tagCode}")
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        if (ok) "Đã lưu ảnh QR vào Thư viện ảnh" else "Không thể lưu ảnh",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                }) {
+                                    Icon(Icons.Default.Download, null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Xuất Ảnh QR")
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(8.dp))
                 Text("Cập nhật trạng thái:", style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold)

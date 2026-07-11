@@ -426,21 +426,22 @@ private fun OrderSuccessDialog(tags: List<QrTag>, onDismiss: () -> Unit) {
         title = { Text("Mua Hàng Thành Công! 🎉", fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Đơn hàng đã xác nhận. Đây là mã QR và PIN của sản phẩm:",
-                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "Đơn hàng đã được xác nhận. Sản phẩm vật lý (sticker/thẻ/tag QR) sẽ được sản xuất và giao đến bạn. " +
+                        "Dưới đây là mã ID để bạn có thể tra cứu thủ công khi cần:",
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 tags.forEachIndexed { i, tag ->
                     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                        Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Sản phẩm ${i + 1}", fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            QrCodeImage(
-                                value = com.qrhealthcare.app.data.api.ApiClient.publicProfileUrl(tag.tagCode),
-                                modifier = Modifier.size(160.dp)
-                            )
+                        Column(modifier = Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.QrCode2, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(32.dp))
+                            Text("Sản phẩm ${i + 1}", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(modifier = Modifier.height(8.dp))
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Column {
-                                    Text("Mã Tag", style = MaterialTheme.typography.bodySmall,
+                                    Text("Mã Tag (ID)", style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Text(tag.tagCode, fontWeight = FontWeight.Bold,
                                         style = MaterialTheme.typography.bodyLarge)

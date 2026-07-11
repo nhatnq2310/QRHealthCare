@@ -342,7 +342,8 @@ data class SubscriptionState(
     val extraProfilesInput: Int = 0,
     val paymentRef: String = "",
     val isProcessing: Boolean = false,
-    val renewSuccess: Boolean = false
+    val renewSuccess: Boolean = false,
+    val promoTag: QrTag? = null // set when this renewal granted the first-paid-month free tag
 ) {
     val computedAmount: Long get() {
         // Both "flexible" (monthly-based) and "yearly" support the +5k/profile
@@ -391,7 +392,7 @@ class SubscriptionViewModel @Inject constructor(
             val backendPlan = plan // "monthly" | "flexible" | "yearly" — all valid as-is
             repo.renewSubscription(backendPlan, extra, _state.value.paymentRef).fold(
                 onSuccess = { sub ->
-                    _state.update { it.copy(isProcessing = false, subscription = sub, renewSuccess = true) }
+                    _state.update { it.copy(isProcessing = false, subscription = sub, renewSuccess = true, promoTag = sub.promoTag) }
                     onResult(true, null)
                 },
                 onFailure = { err ->
@@ -411,7 +412,62 @@ class SubscriptionViewModel @Inject constructor(
         }
     }
 
-    fun dismissRenewSuccess() = _state.update { it.copy(renewSuccess = false) }
+    fun dismissRenewSuccess() = _state.update { it.copy(renewSuccess = false, promoTag = null) }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FAMILY SCAN-NOTIFICATION VIEW MODEL
+// ═══════════════════════════════════════════════════════════════════════════════
+
+data class FamilyNotifyState(
+    val profileId: String = "",
+    val profileName: String = "",
+    val isLoadingProfile: Boolean = false,
+    val isRegistering: Boolean = false,
+    val registered: Boolean = false,
+    val error: String? = null
+)
+
+@HiltViewModel
+class FamilyNotifyViewModel @Inject constructor(
+    private val repo: AppRepository
+) : ViewModel() {
+
+    private val _state = MutableStateFlow(FamilyNotifyState())
+    val state: StateFlow<FamilyNotifyState> = _state.asStateFlow()
+
+    fun setProfileId(id: String) {
+        _state.update { it.copy(profileId = id, error = null) }
+        if (id.isNotBlank()) loadProfileName(id)
+    }
+
+    private fun loadProfileName(id: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoadingProfile = true) }
+            repo.getProfileById(id).fold(
+                onSuccess = { p -> _state.update { it.copy(profileName = p.fullName, isLoadingProfile = false) } },
+                onFailure = { _state.update { it.copy(isLoadingProfile = false, error = "Không tìm thấy hồ sơ với mã này") } }
+            )
+        }
+    }
+
+    /** Requests this device's FCM token and registers it to receive scan alerts for the current profileId. */
+    fun registerThisDevice() {
+        val id = _state.value.profileId
+        if (id.isBlank()) { _state.update { it.copy(error = "Vui lòng nhập mã hồ sơ") }; return }
+        viewModelScope.launch {
+            _state.update { it.copy(isRegistering = true, error = null) }
+            repo.getFcmToken().fold(
+                onSuccess = { token ->
+                    repo.registerFamilyDevice(id, token).fold(
+                        onSuccess = { _state.update { it.copy(isRegistering = false, registered = true) } },
+                        onFailure = { err -> _state.update { it.copy(isRegistering = false, error = err.message) } }
+                    )
+                },
+                onFailure = { err -> _state.update { it.copy(isRegistering = false, error = err.message) } }
+            )
+        }
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -694,6 +750,26 @@ class AdminViewModel @Inject constructor(
         }
     }
 
+    // ─── Order QR tags (admin-only viewing/export for physical production) ──
+
+    private val _orderTags = MutableStateFlow<List<QrTag>>(emptyList())
+    val orderTags: StateFlow<List<QrTag>> = _orderTags.asStateFlow()
+    private val _orderTagsLoading = MutableStateFlow(false)
+    val orderTagsLoading: StateFlow<Boolean> = _orderTagsLoading.asStateFlow()
+
+    fun loadTagsForOrder(orderId: String) {
+        viewModelScope.launch {
+            _orderTagsLoading.value = true
+            _orderTags.value = emptyList()
+            repo.getQrTagsForOrder(orderId).fold(
+                onSuccess = { _orderTags.value = it; _orderTagsLoading.value = false },
+                onFailure = { _orderTagsLoading.value = false }
+            )
+        }
+    }
+
+    fun clearOrderTags() { _orderTags.value = emptyList() }
+
     // ─── Order actions ───────────────────────────────────────────────────────
 
     fun updateOrderStatus(order: Order, newStatus: String, onResult: (Boolean, String?) -> Unit) {
@@ -786,6 +862,28 @@ class OrderHistoryViewModel @Inject constructor(
                 },
                 onFailure = { _state.update { s -> s.copy(error = it.message, isLoading = false) } }
             )
+        }
+    }
+
+    /**
+     * "Mua Lại" (buy again): re-adds every item from a past order into the
+     * cart, using the CURRENT product price/availability (not the historical
+     * snapshot stored on the order) — same as manually re-adding each item
+     * from the shop. Items whose product no longer exists are skipped.
+     * Reports (addedCount, skippedCount) via [onResult].
+     */
+    fun buyAgain(order: Order, cartViewModel: CartViewModel, onResult: (Int, Int) -> Unit) {
+        viewModelScope.launch {
+            var added = 0
+            var skipped = 0
+            for (item in order.items) {
+                if (item.productSlug.isBlank()) { skipped++; continue }
+                val product = repo.getProductBySlug(item.productSlug).getOrNull()
+                if (product == null) { skipped++; continue }
+                cartViewModel.addItem(product, item.quantity)
+                added++
+            }
+            onResult(added, skipped)
         }
     }
 }

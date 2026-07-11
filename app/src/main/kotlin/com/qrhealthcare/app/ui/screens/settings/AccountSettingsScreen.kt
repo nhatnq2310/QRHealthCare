@@ -34,6 +34,7 @@ fun AccountSettingsScreen(
     onOrderHistory: () -> Unit = {},
     onUserGuide: () -> Unit = {},
     onSubscription: () -> Unit = {},
+    onFamilyNotify: () -> Unit = {},
     viewModel: AuthViewModel = com.qrhealthcare.app.ui.util.activityViewModel(),
     subscriptionViewModel: com.qrhealthcare.app.ui.viewmodel.SubscriptionViewModel = hiltViewModel()
 ) {
@@ -238,6 +239,11 @@ fun AccountSettingsScreen(
                     }
                 }
             }
+        }
+
+        // ── Family scan-notification (register THIS device for someone else's profile) ──
+        Card(shape = RoundedCornerShape(12.dp)) {
+            LinkRow(Icons.Default.Notifications, "Nhận Thông Báo Từ Người Thân", onFamilyNotify)
         }
 
         // ── Orders ───────────────────────────────────────────────────────────

@@ -52,5 +52,30 @@ fun generateQrBitmap(content: String, size: Int = 512): Bitmap {
     return bitmap
 }
 
+/**
+ * Admin-only: saves a generated QR bitmap to the device's Pictures gallery so
+ * it can be sent to the physical-production vendor. Regular users never call
+ * this — the app deliberately doesn't render QR images to end users at all
+ * (see OrderSuccessDialog / ShowProfileQrsDialog / QrPickerDialog), since a
+ * user-visible scannable image would let anyone skip buying the physical tag.
+ */
+fun saveQrBitmapToGallery(context: android.content.Context, bitmap: Bitmap, displayName: String): Boolean {
+    return try {
+        val resolver = context.contentResolver
+        val values = android.content.ContentValues().apply {
+            put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, "$displayName.png")
+            put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/png")
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, "Pictures/QRHealthcare")
+            }
+        }
+        val uri = resolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values) ?: return false
+        resolver.openOutputStream(uri)?.use { out -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, out) } ?: return false
+        true
+    } catch (e: Exception) {
+        false
+    }
+}
+
 /** Formats a Long price value as Vietnamese currency: 125,000 ₫ */
 fun formatVND(amount: Long): String = "${"%,d".format(amount).replace(',', '.')} ₫"

@@ -1,6 +1,8 @@
 import { Router } from "express";
 import QrTag from "../models/QrTag.js";
 import Profile from "../models/Profile.js";
+import Subscription from "../models/Subscription.js";
+import { sendToTokens } from "../lib/fcm.js";
 
 const router = Router();
 
@@ -14,15 +16,17 @@ const ALWAYS_PUBLIC = new Set([
   "fullName", "gender", "bloodGroup", "emergencyContacts", "allergies", "profileType",
 ]);
 
-function pickPublic(profile) {
+function pickPublic(profile, bypassPrivacy = false) {
   if (!profile) return null;
   const p = profile.toJSON();
   const hidden = new Set(profile.hiddenFields || []);
   const emptyHidden = (profile.hiddenFields || []).length === 0;
   // Frozen for non-payment of the maintenance subscription behaves exactly
   // like the user's own isPrivate toggle — it's a second, independent reason
-  // to force the same "only always-public fields" view.
-  const forcedPrivate = !!profile.isPrivate || !!profile.subscriptionFrozen;
+  // to force the same "only always-public fields" view. A valid family
+  // access token (see /profiles/:id/family-register) overrides both, since
+  // the owner explicitly granted that specific device full visibility.
+  const forcedPrivate = !bypassPrivacy && (!!profile.isPrivate || !!profile.subscriptionFrozen);
 
   const out = { isPrivate: !!profile.isPrivate, subscriptionFrozen: !!profile.subscriptionFrozen };
 
@@ -71,7 +75,7 @@ function renderArray(label, arr, fmt) {
   return `<div class="section"><h3>${escapeHtml(label)}</h3><ul>${items}</ul></div>`;
 }
 
-function renderPage(p, tagCode, host) {
+function renderPage(p, tagCode, host, opts = {}) {
   const isPet = p.profileType === "pet";
   const title = isPet ? "Hồ Sơ Thú Cưng" : "Hồ Sơ Y Tế";
   const docsHtml = !p.healthDocuments?.length ? "" :
@@ -133,6 +137,43 @@ function renderPage(p, tagCode, host) {
           ? `<div class="private-warn">🔒 Hồ sơ riêng tư — chỉ hiển thị thông tin cơ bản. Liên hệ chủ hồ sơ để biết thêm chi tiết.</div>`
           : ""}
 
+    ${opts.showLocationOptIn ? `
+    <div class="card" id="loc-card">
+      <div style="font-weight:600; margin-bottom:6px;">📍 Thông báo vị trí cho người thân?</div>
+      <div style="color:var(--muted); font-size:13px; margin-bottom:10px;">
+        Chủ hồ sơ đã bật thông báo khẩn cấp. Bạn có thể chia sẻ vị trí hiện tại để người thân của họ biết bạn đang ở đâu.
+      </div>
+      <button id="loc-btn" onclick="shareLocation()"
+        style="background:var(--red); color:white; border:none; padding:10px 16px; border-radius:8px; font-size:14px; width:100%; cursor:pointer;">
+        Chia Sẻ Vị Trí Của Tôi
+      </button>
+      <div id="loc-status" style="margin-top:8px; font-size:13px; color:var(--muted);"></div>
+    </div>
+    <script>
+      function shareLocation() {
+        var btn = document.getElementById('loc-btn');
+        var status = document.getElementById('loc-status');
+        if (!navigator.geolocation) { status.textContent = 'Trình duyệt không hỗ trợ định vị.'; return; }
+        btn.disabled = true;
+        status.textContent = 'Đang lấy vị trí...';
+        navigator.geolocation.getCurrentPosition(function(pos) {
+          fetch(${JSON.stringify(opts.notifyEndpoint || "")}, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+          }).then(function() {
+            status.textContent = '✅ Đã gửi vị trí cho người thân.';
+          }).catch(function() {
+            status.textContent = 'Không thể gửi vị trí — vui lòng thử lại.';
+            btn.disabled = false;
+          });
+        }, function() {
+          status.textContent = 'Bạn đã từ chối chia sẻ vị trí.';
+          btn.disabled = false;
+        }, { enableHighAccuracy: true, timeout: 10000 });
+      }
+    </script>` : ""}
+
     <div class="card">
       ${row("Giới tính", p.gender)}
       ${row("Nhóm máu", p.bloodGroup)}
@@ -189,12 +230,70 @@ router.get("/:tagCode", async (req, res) => {
     }
     Profile.updateOne({ _id: profile._id }, { $inc: { viewCount: 1 } }).catch(() => {});
 
-    const safe = pickPublic(profile);
+    // A family member's own bypass link (?family=<token>) shows them the full
+    // profile regardless of privacy/freeze — and since it's THEM viewing, we
+    // don't send them a "someone scanned your profile" notification about it.
+    const familyToken = String(req.query.family || "");
+    const bypassPrivacy = !!familyToken && !!profile.familyAccessToken && familyToken === profile.familyAccessToken;
+
     const host = `${req.protocol}://${req.get("host")}`;
-    res.type("html").send(renderPage(safe, tagCode, host));
+
+    // Family notification (subscription perk): only fires for a genuine
+    // third-party scan, only while the owner's maintenance plan is active,
+    // and only if at least one family device has registered for this profile.
+    let showLocationOptIn = false;
+    if (!bypassPrivacy && profile.familyFcmTokens?.length) {
+      const sub = await Subscription.findOne({ userId: profile.userId });
+      if (sub && sub.status === "active") {
+        showLocationOptIn = true;
+        const fullViewUrl = `${host}/api/v1/public/${tagCode}?family=${profile.familyAccessToken}`;
+        sendToTokens(profile.familyFcmTokens, {
+          title: `Có người vừa quét mã QR của ${profile.fullName || "hồ sơ"}`,
+          body: "Nhấn để xem đầy đủ thông tin hồ sơ.",
+          data: { type: "qr_scan", profileId: String(profile._id), fullViewUrl },
+        }).catch(() => {});
+      }
+    }
+
+    const safe = pickPublic(profile, bypassPrivacy);
+    res.type("html").send(renderPage(safe, tagCode, host, {
+      showLocationOptIn,
+      notifyEndpoint: `${host}/api/v1/public/${tagCode}/scan-location`,
+    }));
   } catch (err) {
     console.error("[public-profile]", err);
     res.status(500).type("html").send(notFoundPage("Lỗi máy chủ"));
+  }
+});
+
+// POST /public/:tagCode/scan-location — called by the opt-in button's JS on
+// the scan page itself, after the scanner grants geolocation permission.
+// Sends a follow-up push with a Google Maps link, same gating as above.
+router.post("/:tagCode/scan-location", async (req, res) => {
+  try {
+    const tagCode = String(req.params.tagCode || "").toUpperCase().trim();
+    const { lat, lng } = req.body || {};
+    if (typeof lat !== "number" || typeof lng !== "number") {
+      return res.status(400).json({ error: "lat/lng không hợp lệ" });
+    }
+    const tag = await QrTag.findOne({ tagCode });
+    if (!tag?.profileId) return res.status(404).json({ error: "Không tìm thấy" });
+    const profile = await Profile.findById(tag.profileId);
+    if (!profile?.familyFcmTokens?.length) return res.json({ sent: 0 });
+
+    const sub = await Subscription.findOne({ userId: profile.userId });
+    if (!sub || sub.status !== "active") return res.json({ sent: 0 });
+
+    const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+    const result = await sendToTokens(profile.familyFcmTokens, {
+      title: `Vị trí người quét mã QR của ${profile.fullName || "hồ sơ"}`,
+      body: "Nhấn để xem vị trí trên bản đồ.",
+      data: { type: "qr_scan_location", profileId: String(profile._id), mapsUrl },
+    });
+    res.json({ sent: result.sent });
+  } catch (err) {
+    console.error("[public-profile.scan-location]", err);
+    res.status(500).json({ error: "Không thể gửi vị trí" });
   }
 });
 

@@ -7,6 +7,7 @@ router.get("/", async (req, res) => {
   const filter = {};
   if (req.query.tagCode)   filter.tagCode   = String(req.query.tagCode).toUpperCase();
   if (req.query.profileId) filter.profileId = String(req.query.profileId);
+  if (req.query.orderId)   filter.orderId   = String(req.query.orderId);
   const tags = await QrTag.find(filter);
   res.json(tags.map((t) => t.toJSON()));
 });

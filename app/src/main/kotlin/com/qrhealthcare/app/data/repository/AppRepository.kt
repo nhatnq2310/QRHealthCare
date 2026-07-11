@@ -11,6 +11,7 @@ import com.qrhealthcare.app.data.model.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import javax.inject.Inject
@@ -306,6 +307,46 @@ class AppRepository @Inject constructor(
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // FAMILY SCAN NOTIFICATIONS (subscription perk — requires Firebase setup,
+    // see app/FCM_SETUP.md. All functions fail gracefully with a clear error
+    // message if Firebase hasn't been configured yet, instead of crashing.)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /** Gets this device's FCM token. Fails with a friendly message if Firebase isn't configured (see FCM_SETUP.md). */
+    suspend fun getFcmToken(): Result<String> {
+        return try {
+            val token = com.google.firebase.messaging.FirebaseMessaging.getInstance().token.await()
+            Result.success(token)
+        } catch (e: IllegalStateException) {
+            // "Default FirebaseApp is not initialized" — happens when google-services.json hasn't been added yet.
+            Result.failure(Exception("Tính năng thông báo chưa được cấu hình (cần thiết lập Firebase). Liên hệ nhà phát triển."))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /** Registers this device to get notified whenever [profileId]'s QR is scanned. Returns the family access token used to build the full-view link. */
+    suspend fun registerFamilyDevice(profileId: String, fcmToken: String): Result<String> {
+        return try {
+            val response = api.registerFamilyDevice(profileId, mapOf("fcmToken" to fcmToken))
+            val token = response.body()?.get("familyAccessToken")
+            if (response.isSuccessful && token != null) Result.success(token)
+            else Result.failure(Exception("Không thể đăng ký thiết bị"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun unregisterFamilyDevice(profileId: String, fcmToken: String): Result<Unit> {
+        return try {
+            api.unregisterFamilyDevice(profileId, mapOf("fcmToken" to fcmToken))
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // SUBSCRIPTION (gói duy trì lưu trữ hồ sơ)
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -427,6 +468,16 @@ class AppRepository @Inject constructor(
         }
     }
 
+    /** Admin use — the QR tags generated for an order, so admin can view/export the actual images for the physical-production vendor. */
+    suspend fun getQrTagsForOrder(orderId: String): Result<List<QrTag>> {
+        return try {
+            val response = api.getQrTagsByOrder(orderId)
+            Result.success(response.body() ?: emptyList())
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // PRODUCTS
     // ═══════════════════════════════════════════════════════════════════════
@@ -537,7 +588,9 @@ class AppRepository @Inject constructor(
             val orderItems = items.map { cartItem ->
                 OrderItem(
                     productId = cartItem.product.id,
+                    productSlug = cartItem.product.slug,
                     productName = cartItem.product.name,
+                    imageUrl = cartItem.product.imageUrl,
                     price = cartItem.product.price,
                     quantity = cartItem.quantity,
                     emergencyContact = cartItem.emergencyContact

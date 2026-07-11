@@ -1,8 +1,20 @@
 import { Router } from "express";
 import Subscription from "../models/Subscription.js";
 import Profile from "../models/Profile.js";
+import Order from "../models/Order.js";
+import QrTag from "../models/QrTag.js";
 
 const router = Router();
+
+function randomTagCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s = "QRH-";
+  for (let i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
+function randomPin() {
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
 
 const DAY = 24 * 60 * 60 * 1000;
 const TRIAL_DAYS = 30;
@@ -89,7 +101,43 @@ router.post("/renew", async (req, res) => {
     // Paid up -> unfreeze everything again.
     await Profile.updateMany({ userId }, { subscriptionFrozen: false });
 
-    res.json(sub.toJSON());
+    // First-ever paid month promo: +1 free physical QR tag, free shipping.
+    // Only fires on a genuine first conversion (trial/expired/cancelled -> active),
+    // never on an ordinary renewal of an already-active plan.
+    let promoTag = null;
+    if (wasNeverPaid) {
+      try {
+        let tag = null;
+        for (let attempt = 0; attempt < 5 && !tag; attempt++) {
+          try {
+            tag = await QrTag.create({ tagCode: randomTagCode(), pin: randomPin(), profileId: null, productType: "tag" });
+          } catch (e) {
+            if (e.code !== 11000) throw e; // retry only on tagCode collision
+          }
+        }
+        if (tag) {
+          const promoOrder = await Order.create({
+            userId,
+            items: [{ productId: "promo-free-tag", productName: "Tag Y Tế (Quà Tặng Đăng Ký Gói Đầu Tiên)", price: 0, quantity: 1 }],
+            totalAmount: 0,
+            paymentMethod: "promo",
+            status: "pending",
+            qrTagIds: [tag.id],
+            isPromo: true,
+            shippingFee: 0,
+          });
+          tag.orderId = promoOrder.id;
+          await tag.save();
+          promoTag = tag.toJSON();
+        }
+      } catch (err) {
+        console.error("[subscriptions.renew] free-tag promo failed (non-fatal)", err);
+      }
+    }
+
+    const result = sub.toJSON();
+    if (promoTag) result.promoTag = promoTag;
+    res.json(result);
   } catch (err) {
     console.error("[subscriptions.renew]", err);
     res.status(500).json({ error: "Không thể xử lý đăng ký" });

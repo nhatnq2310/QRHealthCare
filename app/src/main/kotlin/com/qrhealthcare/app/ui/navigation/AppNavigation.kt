@@ -52,10 +52,12 @@ object Routes {
     const val ORDER_HISTORY = "orders"
     const val USER_GUIDE = "user_guide"
     const val SUBSCRIPTION = "subscription"
+    const val FAMILY_NOTIFY = "family_notify?profileId={profileId}"
 
     fun productDetail(slug: String) = "shop/$slug"
     fun publicProfile(tagCode: String) = "public/$tagCode"
     fun createProfile(type: String = "human", id: String = "") = "profile/create?type=$type&id=$id"
+    fun familyNotify(profileId: String = "") = "family_notify?profileId=$profileId"
 }
 
 /**
@@ -196,6 +198,16 @@ fun AppNavigation() {
         }
         composable(Routes.ADMIN) { MainScaffold(navController, authState.userRole) { AdminDashboardScreen() } }
         composable(Routes.SUBSCRIPTION) { SubscriptionScreen(navController) }
+        composable(
+            Routes.FAMILY_NOTIFY,
+            arguments = listOf(navArgument("profileId") { defaultValue = "" })
+        ) { backstack ->
+            val profileId = backstack.arguments?.getString("profileId") ?: ""
+            com.qrhealthcare.app.ui.screens.profile.FamilyNotifyScreen(
+                profileId = profileId,
+                onBack = { navController.popBackStack() }
+            )
+        }
         composable(Routes.SETTINGS) {
             MainScaffold(navController, authState.userRole) {
                 AccountSettingsScreen(
@@ -207,12 +219,13 @@ fun AppNavigation() {
                     },
                     onOrderHistory = { navController.navigate(Routes.ORDER_HISTORY) },
                     onUserGuide = { navController.navigate(Routes.USER_GUIDE) },
-                    onSubscription = { navController.navigate(Routes.SUBSCRIPTION) }
+                    onSubscription = { navController.navigate(Routes.SUBSCRIPTION) },
+                    onFamilyNotify = { navController.navigate(Routes.familyNotify()) }
                 )
             }
         }
         composable(Routes.ORDER_HISTORY) {
-            OrderHistoryScreen(onBack = { navController.popBackStack() })
+            OrderHistoryScreen(onBack = { navController.popBackStack() }, navController = navController)
         }
         composable(Routes.USER_GUIDE) {
             com.qrhealthcare.app.ui.screens.settings.UserGuideScreen(

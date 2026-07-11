@@ -30,6 +30,13 @@ const profileSchema = new mongoose.Schema(
     // plan) — independent of the user's own isPrivate preference. Both flags
     // OR together in public-profile.js's privacy check.
     subscriptionFrozen: { type: Boolean, default: false },
+    // ── Family notification (subscription perk) ─────────────────────────────
+    // A registered family member's device gets a push notification every time
+    // this profile's QR is scanned (only while the owner's subscription is
+    // active), plus a link that grants them full profile visibility
+    // regardless of the isPrivate/subscriptionFrozen state — via familyAccessToken.
+    familyFcmTokens:    { type: [String], default: [] },
+    familyAccessToken:  { type: String, default: "" }, // generated lazily on first family registration
     hiddenFields:       { type: [String], default: [] },
     emergencyContacts:  { type: [emergencyContact], default: [] },
     allergies:          { type: [allergy], default: [] },

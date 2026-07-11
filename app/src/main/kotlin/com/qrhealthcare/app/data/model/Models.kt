@@ -167,6 +167,8 @@ data class Order(
     val status: String = "pending",       // "pending" | "paid" | "shipped" | "delivered"
     val shippingAddress: ShippingAddress = ShippingAddress(), // per-order delivery details
     val qrTagIds: List<String> = emptyList(), // IDs of generated QR tags
+    val isPromo: Boolean = false,   // true for the free-tag gift order (first paid subscription month)
+    val shippingFee: Long = 0L,     // always 0 today — no fee system yet
     val createdAt: Long = 0L
 )
 
@@ -180,7 +182,9 @@ data class ShippingAddress(
 
 data class OrderItem(
     val productId: String = "",
+    val productSlug: String = "",  // used by "Mua Lại" (buy again) to look the product back up
     val productName: String = "",
+    val imageUrl: String = "",     // snapshot of the product image at order time, for the Shopee-style history list
     val price: Long = 0L,
     val quantity: Int = 0,
     val emergencyContact: String = ""
@@ -264,7 +268,11 @@ data class Subscription(
     val paymentRef: String = "",
     val history: List<SubscriptionHistoryEntry> = emptyList(),
     val createdAt: Long = 0L,
-    val updatedAt: Long = 0L
+    val updatedAt: Long = 0L,
+    // Only present in the response of POST /subscriptions/renew, and only the
+    // very first time a user actually pays (trial/expired/cancelled -> active).
+    // Represents the free physical QR tag + free shipping promo.
+    val promoTag: QrTag? = null
 ) {
     val isActive: Boolean get() = status == "active"
     val isTrial: Boolean get() = status == "trial"

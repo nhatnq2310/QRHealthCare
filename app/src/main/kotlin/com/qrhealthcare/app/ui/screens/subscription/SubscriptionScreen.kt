@@ -44,7 +44,25 @@ fun SubscriptionScreen(
             onDismissRequest = { viewModel.dismissRenewSuccess(); navController.popBackStack() },
             icon = { Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp)) },
             title = { Text("Đăng Ký Thành Công! 🎉", fontWeight = FontWeight.Bold) },
-            text = { Text("Gói duy trì lưu trữ hồ sơ của bạn đã được kích hoạt. Hồ sơ của bạn (nếu đã bị khóa) đã được mở lại.") },
+            text = {
+                Column {
+                    Text("Gói duy trì lưu trữ hồ sơ của bạn đã được kích hoạt. Hồ sơ của bạn (nếu đã bị khóa) đã được mở lại.")
+                    state.promoTag?.let { tag ->
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+                            shape = RoundedCornerShape(10.dp)) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text("🎁 Quà tặng tháng đầu tiên!", fontWeight = FontWeight.Bold)
+                                Text(
+                                    "Bạn được tặng 1 tag QR vật lý MIỄN PHÍ + miễn phí vận chuyển. " +
+                                        "Mã ID: ${tag.tagCode} — PIN: ${tag.pin}. Chúng tôi sẽ sản xuất và giao đến bạn sớm.",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+                }
+            },
             confirmButton = {
                 Button(onClick = { viewModel.dismissRenewSuccess(); navController.popBackStack() }) { Text("Đóng") }
             }

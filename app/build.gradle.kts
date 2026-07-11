@@ -4,6 +4,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
     kotlin("kapt")
+    // FCM — see note in root build.gradle.kts and app/FCM_SETUP.md before uncommenting:
+    // id("com.google.gms.google-services")
 }
 
 android {
@@ -50,6 +52,14 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
 
+    // Firebase Cloud Messaging (family scan-notification feature).
+    // The library resolves and compiles fine on its own; ACTUAL push delivery
+    // additionally requires the google-services plugin + your own
+    // google-services.json — see app/FCM_SETUP.md. Until then, token
+    // requests fail gracefully (caught in AppRepository) instead of crashing.
+    implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
+    implementation("com.google.firebase:firebase-messaging-ktx")
+
     // Compose BOM
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
@@ -74,6 +84,7 @@ dependencies {
     // Coroutines
     implementation(libs.coroutines.android)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
 
     // DataStore (local session)
     implementation(libs.datastore)

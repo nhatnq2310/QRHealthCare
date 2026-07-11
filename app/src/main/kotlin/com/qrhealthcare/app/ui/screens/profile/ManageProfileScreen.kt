@@ -222,6 +222,7 @@ fun ManageProfileScreen(
                 onEdit = { navController.navigate(Routes.createProfile("human", profile.id)) },
                 onDelete = { viewModel.deleteProfile(profile.id) { viewModel.loadMyProfiles() } },
                 onLinkQr = { showLinkDialog = true; linkTargetProfileId = profile.id },
+                onFamilyNotify = { navController.navigate(Routes.familyNotify(profile.id)) },
                 onShowQrs = {
                     qrsDialogProfile = profile
                     qrsDialogLoading = true
@@ -241,7 +242,8 @@ private fun ProfileListCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onLinkQr: () -> Unit,
-    onShowQrs: () -> Unit
+    onShowQrs: () -> Unit,
+    onFamilyNotify: () -> Unit
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
@@ -327,6 +329,13 @@ private fun ProfileListCard(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Xóa", style = MaterialTheme.typography.bodySmall)
                 }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            // Row 3: Family scan-notification (subscription perk)
+            OutlinedButton(onClick = onFamilyNotify, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Notifications, null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Thông Báo Cho Người Thân Khi Bị Quét", style = MaterialTheme.typography.bodySmall)
             }
         }
     }
@@ -414,22 +423,22 @@ private fun ShowProfileQrsDialog(
                             shape = RoundedCornerShape(10.dp),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                         ) {
-                            Column(
+                            Row(
                                 Modifier.fillMaxWidth().padding(12.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                com.qrhealthcare.app.ui.components.QrCodeImage(
-                                    value = com.qrhealthcare.app.data.api.ApiClient.publicProfileUrl(tag.tagCode),
-                                    modifier = Modifier.size(160.dp)
-                                )
-                                Spacer(Modifier.height(8.dp))
-                                Text(tag.tagCode, fontWeight = FontWeight.Bold)
-                                Text("PIN: ${tag.pin}", style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                if (tag.scanCount > 0) {
-                                    Text("Đã quét ${tag.scanCount} lần",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.outline)
+                                Icon(Icons.Default.QrCode2, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(28.dp))
+                                Spacer(Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(tag.tagCode, fontWeight = FontWeight.Bold)
+                                    Text("PIN: ${tag.pin}", style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    if (tag.scanCount > 0) {
+                                        Text("Đã quét ${tag.scanCount} lần",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.outline)
+                                    }
                                 }
                             }
                         }
