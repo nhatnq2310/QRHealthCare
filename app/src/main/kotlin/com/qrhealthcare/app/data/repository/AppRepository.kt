@@ -346,6 +346,33 @@ class AppRepository @Inject constructor(
         }
     }
 
+    /**
+     * Sends an immediate diagnostic test push (bypasses the scan trigger and
+     * subscription check) so setup problems can be isolated: returns a
+     * human-readable message telling you which half is misconfigured, if any.
+     */
+    suspend fun sendFamilyTestNotify(profileId: String): Result<String> {
+        return try {
+            val response = api.sendFamilyTestNotify(profileId)
+            val body = response.body()
+            if (!response.isSuccessful || body == null) {
+                return Result.failure(Exception("Không thể gửi thông báo thử"))
+            }
+            val tokenCount = (body["tokenCount"] as? Double)?.toInt() ?: 0
+            val disabled = body["disabled"] as? Boolean ?: false
+            val sent = (body["sent"] as? Double)?.toInt() ?: 0
+            val msg = when {
+                tokenCount == 0 -> "Chưa có thiết bị nào đăng ký cho hồ sơ này — hãy đăng ký trước."
+                disabled -> "Backend chưa cấu hình Firebase (thiếu FIREBASE_SERVICE_ACCOUNT_JSON) — xem app/FCM_SETUP.md."
+                sent > 0 -> "Đã gửi thành công tới $sent thiết bị! Kiểm tra điện thoại đã đăng ký."
+                else -> "Gửi thất bại — token có thể đã hết hạn. Hãy đăng ký lại thiết bị."
+            }
+            Result.success(msg)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // SUBSCRIPTION (gói duy trì lưu trữ hồ sơ)
     // ═══════════════════════════════════════════════════════════════════════

@@ -425,6 +425,8 @@ data class FamilyNotifyState(
     val isLoadingProfile: Boolean = false,
     val isRegistering: Boolean = false,
     val registered: Boolean = false,
+    val isTesting: Boolean = false,
+    val testResult: String? = null,
     val error: String? = null
 )
 
@@ -465,6 +467,19 @@ class FamilyNotifyViewModel @Inject constructor(
                     )
                 },
                 onFailure = { err -> _state.update { it.copy(isRegistering = false, error = err.message) } }
+            )
+        }
+    }
+
+    /** Diagnostic: sends an immediate test push, bypassing the scan trigger, to check whether Firebase is actually configured end-to-end. */
+    fun sendTestNotify() {
+        val id = _state.value.profileId
+        if (id.isBlank()) return
+        viewModelScope.launch {
+            _state.update { it.copy(isTesting = true, testResult = null) }
+            repo.sendFamilyTestNotify(id).fold(
+                onSuccess = { msg -> _state.update { it.copy(isTesting = false, testResult = msg) } },
+                onFailure = { err -> _state.update { it.copy(isTesting = false, testResult = err.message ?: "Lỗi không xác định") } }
             )
         }
     }

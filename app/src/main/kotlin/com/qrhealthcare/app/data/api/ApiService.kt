@@ -136,6 +136,10 @@ interface ApiService {
     @POST("profiles/{id}/family-unregister")
     suspend fun unregisterFamilyDevice(@Path("id") id: String, @Body body: Map<String, String>): Response<Map<String, Boolean>>
 
+    /** Diagnostic — sends an immediate test push, bypassing the scan trigger, to isolate client vs. backend Firebase setup issues. */
+    @POST("profiles/{id}/family-test-notify")
+    suspend fun sendFamilyTestNotify(@Path("id") id: String): Response<Map<String, @JvmSuppressWildcards Any>>
+
     // ─── Products ─────────────────────────────────────────────────────────────
 
     /** Get all products for the shop */

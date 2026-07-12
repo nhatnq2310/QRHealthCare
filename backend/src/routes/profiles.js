@@ -3,6 +3,7 @@ import crypto from "crypto";
 import Profile from "../models/Profile.js";
 import Subscription from "../models/Subscription.js";
 import User from "../models/User.js";
+import { sendToTokens } from "../lib/fcm.js";
 
 const router = Router();
 
@@ -132,6 +133,31 @@ router.post("/:id/family-unregister", async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: "Không thể hủy đăng ký thiết bị" });
+  }
+});
+
+// POST /profiles/:id/family-test-notify — sends an immediate test push to
+// every device registered for this profile, bypassing the "someone scanned"
+// trigger and the subscription-active gate entirely. Built purely for
+// diagnosing setup problems: the JSON response tells you exactly which half
+// is broken (see the `disabled` / `sent` / `tokenCount` fields), instead of
+// having to guess from a real scan or dig through server logs.
+router.post("/:id/family-test-notify", async (req, res) => {
+  try {
+    const p = await Profile.findById(req.params.id).catch(() => null);
+    if (!p) return res.status(404).json({ error: "Không tìm thấy hồ sơ" });
+    const tokenCount = (p.familyFcmTokens || []).length;
+    if (tokenCount === 0) {
+      return res.json({ tokenCount: 0, sent: 0, disabled: false, note: "Chưa có thiết bị nào đăng ký cho hồ sơ này." });
+    }
+    const result = await sendToTokens(p.familyFcmTokens, {
+      title: `[TEST] Thông báo thử cho ${p.fullName || "hồ sơ"}`,
+      body: "Đây là thông báo thử nghiệm — nếu bạn nhận được, Firebase đã được cấu hình đúng.",
+      data: { type: "test" },
+    });
+    res.json({ tokenCount, ...result });
+  } catch (err) {
+    res.status(500).json({ error: "Không thể gửi thông báo thử" });
   }
 });
 

@@ -57,7 +57,11 @@ export async function sendToTokens(tokens, { title, body, data = {} }) {
       tokens,
     };
     const result = await admin.messaging().sendEachForMulticast(message);
-    return { sent: result.successCount, disabled: false };
+    const errors = result.responses
+      .map((r, i) => (r.success ? null : { token: tokens[i].slice(0, 12) + "...", error: r.error?.message }))
+      .filter(Boolean);
+    if (errors.length) console.warn("[fcm] some sends failed:", errors);
+    return { sent: result.successCount, disabled: false, failed: result.failureCount, errors };
   } catch (err) {
     console.error("[fcm] send failed:", err.message);
     return { sent: 0, disabled: false, error: err.message };

@@ -151,6 +151,23 @@ fun FamilyNotifyScreen(
                         Text("Đã đăng ký! Bạn sẽ nhận thông báo khi hồ sơ này bị quét.", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
+                Spacer(Modifier.height(4.dp))
+                OutlinedButton(
+                    onClick = { viewModel.sendTestNotify() },
+                    enabled = !state.isTesting,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (state.isTesting) CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                    else {
+                        Icon(Icons.Default.Notifications, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Gửi Thông Báo Thử (kiểm tra cấu hình)")
+                    }
+                }
+                state.testResult?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall,
+                        color = if (it.startsWith("Đã gửi thành công")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                }
             } else {
                 Button(
                     onClick = { startRegistration() },
