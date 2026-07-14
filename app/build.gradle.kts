@@ -4,8 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
     kotlin("kapt")
-    // FCM — see note in root build.gradle.kts and app/FCM_SETUP.md before uncommenting:
-    // id("com.google.gms.google-services")
+    id("com.google.gms.google-services")
 }
 
 android {
