@@ -244,7 +244,7 @@ router.get("/:tagCode", async (req, res) => {
     let showLocationOptIn = false;
     if (!bypassPrivacy && profile.familyFcmTokens?.length) {
       const sub = await Subscription.findOne({ userId: profile.userId });
-      if (sub && sub.status === "active") {
+      if (sub && (sub.status === "active" || sub.status === "trial")) {
         showLocationOptIn = true;
         const fullViewUrl = `${host}/api/v1/public/${tagCode}?family=${profile.familyAccessToken}`;
         sendToTokens(profile.familyFcmTokens, {
@@ -282,7 +282,7 @@ router.post("/:tagCode/scan-location", async (req, res) => {
     if (!profile?.familyFcmTokens?.length) return res.json({ sent: 0 });
 
     const sub = await Subscription.findOne({ userId: profile.userId });
-    if (!sub || sub.status !== "active") return res.json({ sent: 0 });
+    if (!sub || (sub.status !== "active" && sub.status !== "trial")) return res.json({ sent: 0 });
 
     const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
     const result = await sendToTokens(profile.familyFcmTokens, {
