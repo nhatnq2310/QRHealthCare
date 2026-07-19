@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.qrhealthcare.app.data.api.ApiClient
 import com.qrhealthcare.app.data.model.Profile
 import com.qrhealthcare.app.data.model.QrTag
 import com.qrhealthcare.app.ui.viewmodel.ProfileViewModel
@@ -207,21 +208,21 @@ private fun ProfileQrView(
 @Composable
 private fun QrCard(tag: QrTag) {
     Card(shape = RoundedCornerShape(12.dp)) {
-        Row(
+        Column(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(Icons.Default.QrCode2, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(32.dp))
-            Spacer(Modifier.width(12.dp))
-            Column {
-                Text(tag.tagCode, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-                Text(
-                    "Đã quét ${tag.scanCount} lần",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
-            }
+            QrCodeImage(
+                value = ApiClient.publicProfileUrl(tag.tagCode),
+                modifier = Modifier.size(150.dp)
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(tag.tagCode, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+            Text(
+                "Đã quét ${tag.scanCount} lần",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline
+            )
         }
     }
 }

@@ -246,7 +246,7 @@ router.get("/:tagCode", async (req, res) => {
       const sub = await Subscription.findOne({ userId: profile.userId });
       if (sub && (sub.status === "active" || sub.status === "trial")) {
         showLocationOptIn = true;
-        const fullViewUrl = `${host}/api/v1/public/${tagCode}?family=${profile.familyAccessToken}`;
+        const fullViewUrl = `${host}/p/${tagCode}?family=${profile.familyAccessToken}`;
         sendToTokens(profile.familyFcmTokens, {
           title: `Có người vừa quét mã QR của ${profile.fullName || "hồ sơ"}`,
           body: "Nhấn để xem đầy đủ thông tin hồ sơ.",
@@ -258,7 +258,7 @@ router.get("/:tagCode", async (req, res) => {
     const safe = pickPublic(profile, bypassPrivacy);
     res.type("html").send(renderPage(safe, tagCode, host, {
       showLocationOptIn,
-      notifyEndpoint: `${host}/api/v1/public/${tagCode}/scan-location`,
+      notifyEndpoint: `${host}/p/${tagCode}/scan-location`,
     }));
   } catch (err) {
     console.error("[public-profile]", err);

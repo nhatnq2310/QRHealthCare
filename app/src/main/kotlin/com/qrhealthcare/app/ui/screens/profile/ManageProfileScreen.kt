@@ -423,22 +423,22 @@ private fun ShowProfileQrsDialog(
                             shape = RoundedCornerShape(10.dp),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                         ) {
-                            Row(
+                            Column(
                                 Modifier.fillMaxWidth().padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Icon(Icons.Default.QrCode2, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(28.dp))
-                                Spacer(Modifier.width(12.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(tag.tagCode, fontWeight = FontWeight.Bold)
-                                    Text("PIN: ${tag.pin}", style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    if (tag.scanCount > 0) {
-                                        Text("Đã quét ${tag.scanCount} lần",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.outline)
-                                    }
+                                com.qrhealthcare.app.ui.components.QrCodeImage(
+                                    value = com.qrhealthcare.app.data.api.ApiClient.publicProfileUrl(tag.tagCode),
+                                    modifier = Modifier.size(150.dp)
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                Text(tag.tagCode, fontWeight = FontWeight.Bold)
+                                Text("PIN: ${tag.pin}", style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                if (tag.scanCount > 0) {
+                                    Text("Đã quét ${tag.scanCount} lần",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.outline)
                                 }
                             }
                         }

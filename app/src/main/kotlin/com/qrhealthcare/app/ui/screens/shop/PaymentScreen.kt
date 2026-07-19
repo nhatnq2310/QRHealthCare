@@ -428,16 +428,19 @@ private fun OrderSuccessDialog(tags: List<QrTag>, onDismiss: () -> Unit) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
                     "Đơn hàng đã được xác nhận. Sản phẩm vật lý (sticker/thẻ/tag QR) sẽ được sản xuất và giao đến bạn. " +
-                        "Dưới đây là mã ID để bạn có thể tra cứu thủ công khi cần:",
+                        "Dưới đây là mã QR và mã ID để bạn tham khảo:",
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 tags.forEachIndexed { i, tag ->
                     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                         Column(modifier = Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.QrCode2, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(32.dp))
                             Text("Sản phẩm ${i + 1}", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            QrCodeImage(
+                                value = com.qrhealthcare.app.data.api.ApiClient.publicProfileUrl(tag.tagCode),
+                                modifier = Modifier.size(160.dp)
+                            )
                             Spacer(modifier = Modifier.height(8.dp))
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Column {
