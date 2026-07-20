@@ -512,8 +512,21 @@ class AppRepository @Inject constructor(
     suspend fun getProducts(): Result<List<Product>> {
         return try {
             val response = api.getProducts()
-            Result.success(response.body() ?: emptyList())
+            when {
+                response.isSuccessful -> {
+                    val body = response.body() ?: emptyList()
+                    println("[DEBUG] getProducts() SUCCESS: ${body.size} products retrieved")
+                    Result.success(body)
+                }
+                else -> {
+                    val errorMsg = response.errorBody()?.string() ?: "Unknown error (${response.code()})"
+                    println("[DEBUG] getProducts() ERROR: $errorMsg")
+                    Result.failure(Exception("Failed to fetch products: $errorMsg"))
+                }
+            }
         } catch (e: Exception) {
+            println("[DEBUG] getProducts() EXCEPTION: ${e.message} | ${e.javaClass.simpleName}")
+            e.printStackTrace()
             Result.failure(e)
         }
     }
